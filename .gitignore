@@ -1,0 +1,10 @@
+# Specify filepatterns you want git to ignore.
+
+models_most_recent.wf2
+.ipynb_checkpoints/
+*.log
+*.h5
+*.pdf
+all_country_series.csv
+all_country_series_2025_SP.csv
+
