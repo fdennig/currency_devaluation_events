@@ -1,0 +1,585 @@
+"""
+fxrisk.py
+
+Core functions for FX risk research paper.
+"""
+
+# Load data, extract exchange rates, and normalize them
+import pandas as pd
+import numpy as np
+from scipy.signal import argrelextrema
+import altair as alt
+# alt.data_transformers.enable('default')
+
+# Load the CSV file into a pandas DataFrame
+file_path = '../data/priceIndex_and_exchangeRate_series_2025_SP.csv'  # Replace with your CSV file path
+data = pd.read_csv(file_path, index_col=0)
+
+african_countries = [
+    'DZA', 'AGO', 'BEN', 'BWA', 'BFA', 'BDI', 'CMR', 'CPV', 'CAF', 'TCD', 'COM', 'COG', 'CIV', 
+    'COD', 'DJI', 'EGY', 'GNQ', 'ERI', 'SWZ', 'ETH', 'GAB', 'GMB', 'GHA', 'GIN', 'GNB', 'KEN', 
+    'LBY', 'LSO', 'LBR', 'MDG', 'MWI', 'MLI', 'MRT', 'MUS', 'MAR', 'MOZ', 'NAM', 'NER', 'NGA', 
+    'RWA', 'STP', 'SEN', 'SYC', 'SLE', 'SOM', 'ZAF', 'SSD', 'SDN', 'TZA', 'TGO', 'TUN', 'UGA', 
+    'ZMB', 'ZWE'
+]
+
+def build_hybrid_index_and_ma_df(
+    start="1990-01-01",
+    end="2023-01-01",
+    ma_window=5,
+    countries=african_countries,
+    df=data
+):
+    """
+    Build a hybrid real exchange rate index and its moving average for specified countries.
+    
+    This function creates a real exchange rate index by dividing the local price index
+    by the nominal exchange rate, normalized to 100 at the first valid observation. A falling 
+    index indicates currency depreciation/devaluation.
+    
+    Parameters
+    ----------
+    start : str, default "1990-01-01"
+        Start date for the analysis period in YYYY-MM-DD format.
+    end : str, default "2023-01-01"
+        End date for the analysis period in YYYY-MM-DD format.
+    ma_window : int, default 5
+        Window size in years for the moving average baseline calculation.
+    countries : list, default african_countries
+        List of 3-letter ISO country codes to process.
+    df : pd.DataFrame, default data
+        Input DataFrame with exchange rate and price data. Expected columns:
+        - {COUNTRY}PANUSATLS: Nominal exchange rate (LCU per USD)
+        - {COUNTRY}NECONPRVTXN: Consumer price index
+        
+    Returns
+    -------
+    pd.DataFrame
+        Tidy DataFrame with columns:
+        - country: 3-letter ISO country code
+        - year: Year as integer
+        - fx_index: Real exchange rate index (normalized to 100)
+        - baseline: Moving average of fx_index over ma_window years
+        
+    Notes
+    -----
+    - Countries with missing data columns are skipped with a warning
+    - The function requires ma_window years of data before start date for MA calculation
+    - All rows with NaN values are dropped from the final result
+    - Index normalization ensures cross-country comparability
+    
+    Examples
+    --------
+    >>> # Get data for 2000-2020 with 3-year moving average
+    >>> df = build_hybrid_index_and_ma_df(
+    ...     start="2000-01-01", 
+    ...     end="2020-01-01", 
+    ...     ma_window=3
+    ... )
+    """
+
+    start_date = pd.to_datetime(start)
+    sd_minus_window = start_date - pd.DateOffset(years=ma_window-1) 
+    df.index = pd.to_datetime(df.index)
+    df = df[(df.index >= sd_minus_window) & (df.index <= end)]
+    
+    records = []
+
+    for country in countries:
+        panusatls_col = f"{country}PANUSATLS"
+        price_level_col = f"{country}NECONPRVTXN"
+
+        if panusatls_col not in df.columns or price_level_col not in df.columns:
+            print(f"Missing columns for {country}")
+            continue
+
+        series = df[price_level_col] / df[panusatls_col]
+        first_valid = series.first_valid_index()
+        if first_valid is None:
+            print(f"No data for {country}")
+            continue
+
+        # normalize to 100 at first valid point
+        series_norm = series / series.loc[first_valid] * 100
+        series_ma = series_norm.rolling(window=ma_window, min_periods=ma_window).mean()
+
+        # Also keep the nominal exchange rate (PANUSATLS) for the output
+        nominal_fx_series = 1/df[panusatls_col]
+
+        for date, index_val, ma_val, nominal_fx in zip(
+            series_norm.index, series_norm.values, series_ma.values, nominal_fx_series.values
+        ):
+            if date >= start_date and not pd.isna(index_val):
+                records.append({
+                    "country": country,
+                    "year": date.year,
+                    "fx_index": float(index_val),
+                    "baseline": float(ma_val) if not pd.isna(ma_val) else np.nan,
+                    "nominal_fx": float(nominal_fx) if not pd.isna(nominal_fx) else np.nan
+                })
+                
+    tidy_df = pd.DataFrame(records).sort_values(["country", "year"]).reset_index(drop=True)
+    return tidy_df.dropna()
+
+def compute_terminal_residuals(
+    df,
+    years=15,
+    discount_rate=0.05,
+    window_mode="two_non_overlapping"  # or "rolling"
+):
+    """
+    Compute terminal residuals (PV of net normalized deviations) for fixed-horizon windows.
+    
+    df must have: 'country', 'year', 'hybrid_index'
+
+    Returns DataFrame with:
+      country, window_start, window_end, baseline_value, net_pv, loss
+    """
+    out = []
+    af = (1 - (1 + discount_rate) ** -years) / discount_rate
+    
+    for country, g in df.groupby("country"):
+        g = g.sort_values("year").reset_index(drop=True)
+        n = len(g)
+        
+        if n < years:
+            continue
+
+        # choose window starts
+        if window_mode == "two_non_overlapping":
+            starts = list(range(0, n - years + 1, years))[:2]  # up to 2 per run
+        elif window_mode == "rolling":
+            starts = list(range(0, n - years + 1))
+        else:
+            raise ValueError("window_mode must be 'two_non_overlapping' or 'rolling'")
+
+        for i0 in starts:
+            win = g.iloc[i0:i0+years].copy()
+
+            # skip windows with missing values in fx_index
+            if win["fx_index"].isna().any():
+                continue
+
+            base = float(win["fx_index"].iloc[0])
+            base_nominal = float(win["nominal_fx"].iloc[0])
+
+            # signed normalized deviation
+            git = (win["fx_index"].to_numpy() / base) - 1.0
+            # git_nominal = (win["nominal_fx"].to_numpy() / base_nominal) - 1.0
+
+            # discount factors to start of window (year-end cashflows)
+            t = np.arange(1, years + 1, dtype=float)
+            dfactors = (1.0 + discount_rate) ** (-t)
+
+            piit = float(np.sum(git * dfactors))
+            # net_pv_nominal= float(np.sum(git_nominal * dfactors))
+            net_pv_per_debt_stock = piit / af**2
+            loss   = min(net_pv_per_debt_stock, 0.0)
+
+            out.append({
+                "country": country,
+                "window_start": int(win["year"].iloc[0]),
+                "window_end": int(win["year"].iloc[-1]),
+                "baseline": base,
+                "net_pv_by_debt_stock": net_pv_per_debt_stock,
+                "loss": loss,    
+            })
+
+    return pd.DataFrame(out)
+# Example usage:
+# residuals = compute_terminal_residuals(df, years=15, discount_rate=0.05,
+#                                        window_mode="two_non_overlapping")
+# expected_loss = residuals["loss"].mean()
+# prob_positive = (residuals["loss"] > 0).mean()
+
+def identify_events(
+    df, 
+    trigger_threshold = 0.1,
+    end_threshold = 0.1,
+    countries = african_countries
+):
+    """
+    Identify currency devaluation events using peak detection and threshold analysis.
+    
+    This function detects significant currency devaluation episodes by:
+    1. Finding local troughs in the real exchange rate index
+    2. Identifying events where troughs exceed trigger_threshold below baseline
+    3. Determining event end when index returns to end_threshold within baseline
+    4. Filtering overlapping events to select the most severe ones
+    5. Augmenting the input DataFrame with event indicators and annual loss calculations
+    
+    Parameters
+    ----------
+    df : pd.DataFrame
+        Input DataFrame from build_hybrid_index_and_ma_df with columns:
+        - country: 3-letter ISO country code
+        - year: Year as integer  
+        - fx_index: Real exchange rate index
+        - baseline: Moving average baseline
+    trigger_threshold : float, default 0.1
+        Minimum deviation below baseline (as fraction) to trigger an event.
+        E.g., 0.1 = 10% below baseline.
+    end_threshold : float, default 0.1
+        Maximum deviation from baseline (as fraction) to end an event.
+        E.g., 0.0 = return to baseline level.
+    countries : list, default african_countries
+        List of 3-letter ISO country codes to analyze.
+        
+    Returns
+    -------
+    events : pd.DataFrame
+        DataFrame of identified devaluation events with columns:
+        - Country: 3-letter ISO country code
+        - Start_Date: Year when event began (first point below trigger)
+        - End_Date: Year when event ended (return back above end threshold) or last data year
+        - Peak_Date: Year of maximum devaluation during event
+        - Duration: Event length in years
+        - Peak_Devaluation: Maximum percentage deviation from baseline during event
+        - Devaluation_at_End: Percentage deviation from baseline at event end
+        - Drawdown_Area: Cumulative percentage-point loss over event duration
+    df_events : pd.DataFrame
+        Augmented input DataFrame with additional columns:
+        - in_event: Binary indicator (1 if country-year is in a devaluation event, 0 otherwise)
+        - annual_loss: Annual loss as fraction relative to event start baseline (negative values only)
+        
+    Notes
+    -----
+    Algorithm Details:
+    - Uses scipy.signal.argrelextrema to find local minima (troughs)
+    - Requires "clean" fall: no intermediate peaks above trigger during run-up
+    - For overlapping events, selects those with greatest drawdown area first,
+      then lowest peak devaluation as tiebreaker
+    - Ongoing events (no return to threshold) use end of sample as event end
+    - Drawdown area calculated as cumulative deviation from baseline over time
+    
+    Event Quality Filters:
+    - Skips events with intermediate peaks during fall phase
+    - Handles incomplete events that don't return to baseline
+    - Prevents double-counting of overlapping episodes
+    
+    Annual Loss Calculation:
+    - annual_loss calculated as (fx_index - event_start_baseline) / event_start_baseline
+    - Only negative deviations (actual losses below baseline) are recorded
+    - Uses baseline from event start date as reference for entire event duration
+    - Non-event years have annual_loss = 0.0
+    
+    Event Marking:
+    - in_event = 1 for all country-years within identified event periods
+    - in_event = 0 for country-years outside of events
+    - Allows for easy calculation of annual prevalence rates
+    
+    Examples
+    --------
+    >>> # Detect major devaluation events (>20% trigger, return to baseline)
+    >>> events, df_events = identify_events(
+    ...     df, 
+    ...     trigger_threshold=0.20,
+    ...     end_threshold=0.0
+    ... )
+    
+    >>> # Check annual prevalence
+    >>> prevalence = df_events['in_event'].mean()
+    >>> print(f"Annual prevalence: {prevalence:.1%}")
+    
+    >>> # Calculate total annual losses
+    >>> total_annual_loss = df_events['annual_loss'].sum()
+    >>> total_event_loss = events['Drawdown_Area'].sum()
+    """
+
+    # Add in_event column to dataframe
+    if 'in_event' not in df.columns:
+        df['in_event'] = 0
+    # If annual_loss column doesn't exist, create it
+    if 'annual_loss' not in df.columns:
+        df['annual_loss'] = 0.0
+    results = []
+
+    for country in countries:
+        country_data = df[df.country == country]
+
+        # Check if country has any data in the filtered dataframe
+        if len(country_data) == 0:
+            continue  # Skip countries with no data
+        
+        year         = country_data["year"].values
+        fx_index     = country_data["fx_index"].values
+        baseline     = country_data["baseline"].values
+
+        troughs_new_indices = argrelextrema(fx_index, np.less)[0]
+        if len(fx_index) >= 2 and fx_index[-1] < fx_index[-2]:
+            troughs_new_indices = np.append(troughs_new_indices, len(fx_index) - 1)
+
+        # Store events for this country to filter overlaps
+        country_events = []
+
+        for p_new_idx in np.arange(len(year)):
+            trigger_level = baseline[p_new_idx] * (1. - trigger_threshold)  # Use trigger threshold
+            end_level     = baseline[p_new_idx] * (1. - end_threshold)  # This changes with end_threshold!
+
+            possible_event_troughs = troughs_new_indices[troughs_new_indices > p_new_idx]
+            if possible_event_troughs.size == 0:
+                continue
+
+            for t_new_idx in possible_event_troughs:
+
+                if fx_index[t_new_idx] <= trigger_level:
+                    end_date = None
+                    event_duration = None
+                    max_drop = None
+                    max_devaluation = None
+                    drawdown_area = None
+                    
+                    intermediate_troughs = 0
+                    for i in range(p_new_idx+1, t_new_idx):
+                        if fx_index[i] > trigger_level:  # Check against trigger level
+                            intermediate_troughs += 1
+                    if intermediate_troughs > 0:
+                        continue # skip this event if there are intermediate troughs, as it is not a clean rise and fall
+
+                    for idx in range(t_new_idx+1, len(fx_index)):
+                        if fx_index[idx] >= end_level:
+                            # time measures
+                            end_date = year[idx]
+                            event_duration = year[idx] - year[p_new_idx] + 1    # inclusive of both start and end years
+
+                            # max amplitude
+                            max_drop = t_new_idx
+                            for i in troughs_new_indices[(troughs_new_indices>t_new_idx) & (troughs_new_indices<idx)]:
+                                if fx_index[i] < fx_index[max_drop]:
+                                    max_drop = i
+                            max_devaluation = (fx_index[max_drop] - baseline[p_new_idx]) / baseline[p_new_idx] * 100
+
+                            # total dollar loss in percent of CFADS
+                            integrand = np.minimum(fx_index/baseline[p_new_idx] - 1, 0.0) * 100 # percentage deviation from baseline at event start date
+                            drawdown_area = np.sum(integrand[p_new_idx:idx+1]) #sum of integrand over event period
+                            break
+
+                    else: # if return condition not met, repeat with end period
+                        idx = len(fx_index) -1
+                        end_date = year[idx]
+                        event_duration = year[idx] - year[p_new_idx] + 1    # inclusive of both start and end years
+                        max_drop = t_new_idx
+                        for i in troughs_new_indices[(troughs_new_indices>t_new_idx)]:
+                            if fx_index[i] > fx_index[max_drop]:
+                                max_drop = i
+                        max_devaluation = (fx_index[max_drop] - baseline[p_new_idx]) / baseline[p_new_idx] * 100
+                        integrand = np.minimum(fx_index/baseline[p_new_idx] - 1, 0.0) * 100 # percentage deviation from baseline at event start date
+                        drawdown_area = np.sum(integrand[p_new_idx:idx+1]) #sum of integrand over event period
+
+                    country_events.append({
+                        "Country": country, 
+                        "Start_Date": year[p_new_idx],
+                        "End_Date": end_date,
+                        "Peak_Date": year[max_drop],
+                        "Duration": event_duration,
+                        "Peak_Devaluation": max_devaluation,
+                        "Devaluation_at_End": (fx_index[idx] - baseline[p_new_idx]) / baseline[p_new_idx] * 100,
+                        "Drawdown_Area": drawdown_area
+                    })
+
+        # Filter overlapping events for this country
+        selected = []
+        if country_events:
+            # Sort by Drawdown_Area ascending, then by Peak_Devaluation ascending
+            country_events.sort(key=lambda x: (x['Drawdown_Area'], x['Peak_Devaluation'])) # , reverse=True
+            
+            
+            used_intervals = []
+            for event in country_events:
+                start = event['Start_Date']
+                end = event['End_Date']
+                # Check for overlap
+                overlap = False
+                for s, e in used_intervals:
+                    if not (end < s or start > e):
+                        overlap = True
+                        break
+                if not overlap:
+                    selected.append(event)
+                    used_intervals.append((start, end))
+            
+            results.extend(selected)
+
+            
+        # Mark country-years as being in an event
+        for event in selected:
+            start = event['Start_Date']
+            end = event['End_Date']
+            event_years_mask = (
+                (df['country'] == country) & 
+                (df['year'] >= start) & 
+                (df['year'] <= end)
+            )
+            # Mark rows as being in an event
+            df.loc[event_years_mask, 'in_event'] = 1
+            
+            # Get baseline at event start date for reference
+            start_baseline = df.loc[(df['country'] == country) & (df['year'] == start), 'baseline'].values[0]
+            
+            # Calculate annual loss for each year in the event
+            for idx in df.loc[event_years_mask].index:
+                current_fx = df.loc[idx, 'fx_index']
+                loss = (current_fx - start_baseline) / start_baseline
+                # Only record negative deviations (actual losses)
+                df.loc[idx, 'annual_loss'] = min(loss, 0.0)
+
+    return pd.DataFrame(results), df
+
+def annuity_factor(n_years=15, r=0.05):
+    """
+    Calculate present value annuity factor for converting lump sum to annual payments.
+    
+    Parameters
+    ----------
+    n_years : int, default 15
+        Number of years for the annuity
+    r : float, default 0.05
+        Annual discount rate
+        
+    Returns
+    -------
+    float
+        Present value annuity factor
+    """
+    if r == 0:
+        return n_years
+    return (1 - (1 + r) ** (-n_years)) / r
+
+def calculate_simple_risk_premium(df_events):
+    """
+    Calculate prevalence, annual severity, and pure risk premium from df_events.
+    
+    Parameters
+    ----------
+    df_events : pd.DataFrame
+        DataFrame from identify_events() with columns:
+        - country: 3-letter ISO country code
+        - year: Year as integer
+        - in_event: Binary indicator (1 if in event, 0 otherwise)
+        - annual_loss: Annual loss as fraction (negative values)
+        
+    Returns
+    -------
+    dict
+        Dictionary with:
+        - prevalence: Proportion of country-years in events
+        - mean_annual_severity: Mean annual loss when losses occur (%)
+        - pure_risk_premium: Expected annual loss per country-year (%)
+        - total_exposure: Total country-year observations
+        - event_exposure: Number of country-years in events
+    """
+    
+    # Total exposure (all country-years)
+    total_exposure = len(df_events)
+    
+    if total_exposure == 0:
+        return {
+            'prevalence': 0.0,
+            'mean_annual_severity': 0.0,
+            'pure_risk_premium': 0.0,
+            'total_exposure': 0,
+            'event_exposure': 0
+        }
+    
+    # Event exposure (country-years in events)
+    event_years = df_events[df_events['in_event'] == 1]
+    event_exposure = len(event_years)
+    
+    # Prevalence rate
+    prevalence = event_exposure / total_exposure
+    
+    if event_exposure == 0:
+        return {
+            'prevalence': 0.0,
+            'mean_annual_severity': 0.0,
+            'pure_risk_premium': 0.0,
+            'total_exposure': total_exposure,
+            'event_exposure': 0
+        }
+    
+    # Annual severity (convert to percentage and take absolute value)
+    annual_losses = event_years['annual_loss'].abs() * 100
+    mean_annual_severity = annual_losses.mean()
+    
+    # Pure risk premium (expected annual loss per country-year)
+    pure_risk_premium = prevalence * mean_annual_severity
+    
+    return {
+        'prevalence': prevalence,
+        'mean_annual_severity': mean_annual_severity,
+        'pure_risk_premium': pure_risk_premium,
+        'total_exposure': total_exposure,
+        'event_exposure': event_exposure
+    }
+
+def calculate_event_based_risk_premium(events, df_events):
+    """
+    Calculate event-based frequency, severity, and pure risk premium.
+    
+    Parameters
+    ----------
+    events : pd.DataFrame
+        Event-level data from identify_events() with columns:
+        - Country: 3-letter ISO country code
+        - Start_Date, End_Date: Event dates
+        - Duration: Event length in years
+        - Drawdown_Area: Total event loss (%)
+    df_events : pd.DataFrame
+        Country-year data with columns:
+        - country: 3-letter ISO country code
+        - year: Year as integer
+        
+    Returns
+    -------
+    dict
+        Dictionary with:
+        - frequency: Events per country-year at risk (time-at-risk adjusted)
+        - mean_severity: Mean total event loss when events occur (%)
+        - pure_risk_premium: Expected event loss per country-year at risk (%)
+        - total_exposure: Total country-years in dataset
+        - time_at_risk: Country-years not in events (exposure for new events)
+        - total_events: Number of events detected
+    """
+    
+    # Total exposure (all country-years in dataset)
+    total_exposure = len(df_events)
+    
+    if total_exposure == 0 or len(events) == 0:
+        return {
+            'frequency': 0.0,
+            'mean_severity': 0.0,
+            'pure_risk_premium': 0.0,
+            'total_exposure': total_exposure,
+            'time_at_risk': total_exposure,
+            'total_events': 0
+        }
+    
+    # Calculate time at risk (exclude country-years already in events)
+    total_event_duration = events['Duration'].sum()
+    time_at_risk = total_exposure - total_event_duration
+    
+    # Number of events
+    total_events = len(events)
+    
+    # Event-based frequency (events per country-year at risk)
+    if time_at_risk > 0:
+        frequency = total_events / time_at_risk
+    else:
+        frequency = 0.0
+    
+    # Event-based severity (mean total event loss)
+    mean_severity = events['Drawdown_Area'].mean()
+    
+    # Pure risk premium (expected event loss per country-year at risk)
+    pure_risk_premium = frequency * mean_severity
+    
+    return {
+        'frequency': frequency,
+        'mean_severity': mean_severity,
+        'pure_risk_premium': pure_risk_premium,
+        'total_exposure': total_exposure,
+        'time_at_risk': time_at_risk,
+        'total_events': total_events
+    }
+
+

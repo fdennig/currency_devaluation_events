@@ -1,0 +1,2769 @@
+{
+	"auto_complete":
+	{
+		"selected_items":
+		[
+			[
+				"subp",
+				"subprocess"
+			],
+			[
+				"subst",
+				"substr"
+			],
+			[
+				"fra",
+				"fragSilen"
+			],
+			[
+				"ac",
+				"activate -n your_environment_"
+			],
+			[
+				"connect",
+				"connect_param!(m, :"
+			],
+			[
+				"bas",
+				"basicCommodity"
+			],
+			[
+				"fina",
+				"finalSupply"
+			],
+			[
+				"fin",
+				"finalSupply"
+			],
+			[
+				"basic",
+				"basicActivity"
+			],
+			[
+				"valu",
+				"values_from"
+			],
+			[
+				"pivot",
+				"pivot_wider"
+			],
+			[
+				"fdb",
+				"fdByComType"
+			],
+			[
+				"intBa",
+				"intBasicS"
+			],
+			[
+				"intB",
+				"intBasicEN"
+			],
+			[
+				"sec",
+				"sectors"
+			],
+			[
+				"bra",
+				"braces"
+			],
+			[
+				"functi",
+				"function-after-parameters"
+			],
+			[
+				"function",
+				"function-parameters"
+			],
+			[
+				"RES",
+				"RESGDP"
+			],
+			[
+				"keywor",
+				"keywords"
+			],
+			[
+				"so",
+				"solve_end"
+			],
+			[
+				"dat",
+				"dat_end"
+			],
+			[
+				"dif",
+				"NEGDIFTOTKN"
+			],
+			[
+				"gdp",
+				"NYGDPMKTPKN"
+			],
+			[
+				"neg",
+				"NEGDIFTOTKN_A"
+			],
+			[
+				"negd",
+				"NEGDIFTOTKN_A"
+			],
+			[
+				"NEGDif",
+				"NEGDIFTOTKN"
+			],
+			[
+				"necon",
+				"NECONPRVTKN"
+			],
+			[
+				"neco",
+				"NECONPRVTKN_0"
+			],
+			[
+				"con",
+				"NECONPRVTKN"
+			],
+			[
+				"sol",
+				"solve_end"
+			],
+			[
+				"res",
+				"RESGDP"
+			],
+			[
+				"da",
+				"dat_end"
+			],
+			[
+				"righ",
+				"right_on="
+			],
+			[
+				"sq",
+				"sqlalchemy"
+			],
+			[
+				"post",
+				"post_recycle_pc_consumption"
+			],
+			[
+				"co2_t",
+				"co2_tax_distribution"
+			],
+			[
+				"model",
+				"model_settings"
+			],
+			[
+				"quinti",
+				"quintile_level_variables"
+			],
+			[
+				"co2_ta",
+				"co2_tax_revenue"
+			],
+			[
+				"globa",
+				"global_emissions_with_landuse"
+			],
+			[
+				"global",
+				"global_co2_mitigation"
+			],
+			[
+				"recy",
+				"recycle_mode_id"
+			],
+			[
+				"region",
+				"region_id"
+			],
+			[
+				"mod",
+				"model_settings"
+			],
+			[
+				"if",
+				"if_exists"
+			],
+			[
+				"to",
+				"to_sql"
+			],
+			[
+				"creat",
+				"create_region_map\tstatement"
+			],
+			[
+				"cr",
+				"create_recycle_mode\tstatement"
+			],
+			[
+				"create",
+				"create_model_settings\tstatement"
+			],
+			[
+				"cre",
+				"create_quintile_vars\tstatement"
+			],
+			[
+				"selec",
+				"select_data"
+			],
+			[
+				"data",
+				"DataFrame"
+			],
+			[
+				"__",
+				"__name__\tinstance"
+			],
+			[
+				"revenu",
+				"revenue_recycling"
+			],
+			[
+				"income",
+				"incoms_shares_long"
+			],
+			[
+				"nice",
+				"nice_recycle"
+			],
+			[
+				"bau",
+				"bau_model"
+			],
+			[
+				"damage",
+				"damage_elasticity"
+			],
+			[
+				"n",
+				"n_steps"
+			],
+			[
+				"tax",
+				"tax_revenue"
+			],
+			[
+				"quitn",
+				"quintile_income_scenario"
+			],
+			[
+				"up",
+				"uploadForm"
+			],
+			[
+				"upl",
+				"uploadData"
+			],
+			[
+				"D_",
+				"D_conf"
+			],
+			[
+				"O",
+				"O_conf"
+			],
+			[
+				"crea",
+				"createDummies"
+			],
+			[
+				"merg",
+				"mergeConMob"
+			],
+			[
+				"frame",
+				"frame\tframe"
+			]
+		]
+	},
+	"buffers":
+	[
+		{
+			"file": "README.md",
+			"settings":
+			{
+				"buffer_size": 1577,
+				"encoding": "UTF-8",
+				"line_ending": "Windows"
+			},
+			"undo_stack":
+			[
+				[
+					1,
+					1,
+					"insert",
+					{
+						"characters": "\n"
+					},
+					"AQAAAAAAAAAAAAAAAQAAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					3,
+					1,
+					"paste",
+					null,
+					"AQAAAAAAAAAAAAAARgIAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+				],
+				[
+					4,
+					1,
+					"insert",
+					{
+						"characters": "\n"
+					},
+					"AQAAAEYCAAAAAAAARwIAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAARgIAAAAAAABGAgAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					13,
+					1,
+					"insert_snippet",
+					{
+						"contents": "`${0:$SELECTION}`"
+					},
+					"AQAAAEYCAAAAAAAASAIAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAARgIAAAAAAABGAgAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					15,
+					1,
+					"insert",
+					{
+						"characters": "`"
+					},
+					"AQAAAEgCAAAAAAAASQIAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAASAIAAAAAAABIAgAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					19,
+					1,
+					"insert",
+					{
+						"characters": "\n#"
+					},
+					"AgAAAEoCAAAAAAAASwIAAAAAAAAAAAAASwIAAAAAAABMAgAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAASgIAAAAAAABKAgAAAAAAAAAAAAAAACBA"
+				],
+				[
+					20,
+					1,
+					"insert",
+					{
+						"characters": " Ongoing"
+					},
+					"CAAAAEwCAAAAAAAATQIAAAAAAAAAAAAATQIAAAAAAABOAgAAAAAAAAAAAABOAgAAAAAAAE8CAAAAAAAAAAAAAE8CAAAAAAAAUAIAAAAAAAAAAAAAUAIAAAAAAABRAgAAAAAAAAAAAABRAgAAAAAAAFICAAAAAAAAAAAAAFICAAAAAAAAUwIAAAAAAAAAAAAAUwIAAAAAAABUAgAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAATAIAAAAAAABMAgAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					21,
+					7,
+					"left_delete",
+					null,
+					"BwAAAFMCAAAAAAAAUwIAAAAAAAABAAAAZ1ICAAAAAAAAUgIAAAAAAAABAAAAblECAAAAAAAAUQIAAAAAAAABAAAAaVACAAAAAAAAUAIAAAAAAAABAAAAb08CAAAAAAAATwIAAAAAAAABAAAAZ04CAAAAAAAATgIAAAAAAAABAAAAbk0CAAAAAAAATQIAAAAAAAABAAAATw",
+					"AQAAAAAAAAABAAAAVAIAAAAAAABUAgAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					22,
+					1,
+					"insert",
+					{
+						"characters": "Deve"
+					},
+					"BAAAAE0CAAAAAAAATgIAAAAAAAAAAAAATgIAAAAAAABPAgAAAAAAAAAAAABPAgAAAAAAAFACAAAAAAAAAAAAAFACAAAAAAAAUQIAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAATQIAAAAAAABNAgAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					23,
+					4,
+					"left_delete",
+					null,
+					"BAAAAFACAAAAAAAAUAIAAAAAAAABAAAAZU8CAAAAAAAATwIAAAAAAAABAAAAdk4CAAAAAAAATgIAAAAAAAABAAAAZU0CAAAAAAAATQIAAAAAAAABAAAARA",
+					"AQAAAAAAAAABAAAAUQIAAAAAAABRAgAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					24,
+					1,
+					"insert",
+					{
+						"characters": "N"
+					},
+					"AQAAAE0CAAAAAAAATgIAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAATQIAAAAAAABNAgAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					25,
+					1,
+					"left_delete",
+					null,
+					"AQAAAE0CAAAAAAAATQIAAAAAAAABAAAATg",
+					"AQAAAAAAAAABAAAATgIAAAAAAABOAgAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					26,
+					1,
+					"insert",
+					{
+						"characters": "Rear"
+					},
+					"BAAAAE0CAAAAAAAATgIAAAAAAAAAAAAATgIAAAAAAABPAgAAAAAAAAAAAABPAgAAAAAAAFACAAAAAAAAAAAAAFACAAAAAAAAUQIAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAATQIAAAAAAABNAgAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					27,
+					2,
+					"left_delete",
+					null,
+					"AgAAAFACAAAAAAAAUAIAAAAAAAABAAAAck8CAAAAAAAATwIAAAAAAAABAAAAYQ",
+					"AQAAAAAAAAABAAAAUQIAAAAAAABRAgAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					28,
+					1,
+					"insert",
+					{
+						"characters": "search"
+					},
+					"BgAAAE8CAAAAAAAAUAIAAAAAAAAAAAAAUAIAAAAAAABRAgAAAAAAAAAAAABRAgAAAAAAAFICAAAAAAAAAAAAAFICAAAAAAAAUwIAAAAAAAAAAAAAUwIAAAAAAABUAgAAAAAAAAAAAABUAgAAAAAAAFUCAAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAATwIAAAAAAABPAgAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					29,
+					1,
+					"insert",
+					{
+						"characters": " notes"
+					},
+					"BgAAAFUCAAAAAAAAVgIAAAAAAAAAAAAAVgIAAAAAAABXAgAAAAAAAAAAAABXAgAAAAAAAFgCAAAAAAAAAAAAAFgCAAAAAAAAWQIAAAAAAAAAAAAAWQIAAAAAAABaAgAAAAAAAAAAAABaAgAAAAAAAFsCAAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAVQIAAAAAAABVAgAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					32,
+					1,
+					"mde_change_headings_level",
+					{
+						"by": 1
+					},
+					"AQAAAFwCAAAAAAAAhAIAAAAAAAAnAAAAIyBDb21wdXRpbmcgQ3VycmVuY3kgRGV2YWx1YXRpb24gRXZlbnRz",
+					"AQAAAAAAAAABAAAAXQIAAAAAAABdAgAAAAAAAAAAAAAAAPC/"
+				]
+			]
+		},
+		{
+			"file": "source/data_analysis_functions.py",
+			"redo_stack":
+			[
+				[
+					7,
+					1,
+					"insert",
+					{
+						"characters": "ö"
+					},
+					"AQAAAEYBAAAAAAAARgEAAAAAAAACAAAAw7Y",
+					"AQAAAAAAAAABAAAARwEAAAAAAABHAQAAAAAAAAAAAAAAAPC/"
+				]
+			],
+			"settings":
+			{
+				"buffer_size": 20212,
+				"encoding": "UTF-8",
+				"line_ending": "Windows"
+			},
+			"undo_stack":
+			[
+				[
+					4,
+					1,
+					"insert",
+					{
+						"characters": "../"
+					},
+					"AwAAAD4BAAAAAAAAPwEAAAAAAAAAAAAAPwEAAAAAAABAAQAAAAAAAAAAAABAAQAAAAAAAEEBAAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAPgEAAAAAAAA+AQAAAAAAAAAAAAAAAPC/"
+				],
+				[
+					5,
+					1,
+					"insert",
+					{
+						"characters": "data/"
+					},
+					"BQAAAEEBAAAAAAAAQgEAAAAAAAAAAAAAQgEAAAAAAABDAQAAAAAAAAAAAABDAQAAAAAAAEQBAAAAAAAAAAAAAEQBAAAAAAAARQEAAAAAAAAAAAAARQEAAAAAAABGAQAAAAAAAAAAAAA",
+					"AQAAAAAAAAABAAAAQQEAAAAAAABBAQAAAAAAAAAAAAAAAPC/"
+				]
+			]
+		}
+	],
+	"build_system": "",
+	"build_system_choices":
+	[
+		[
+			[
+				[
+					"Anaconda Python Builder",
+					""
+				],
+				[
+					"Packages/Python/Python.sublime-build",
+					""
+				],
+				[
+					"Packages/Python/Python.sublime-build",
+					"Syntax Check"
+				],
+				[
+					"Packages/SendCode/support/IPython - Source File.sublime-build",
+					""
+				],
+				[
+					"Packages/SublimeREPL/sublimerepl_build_system_hack.sublime-build",
+					""
+				]
+			],
+			[
+				"Packages/Python/Python.sublime-build",
+				""
+			]
+		],
+		[
+			[
+				[
+					"Packages/LaTeXing/LaTeX.sublime-build",
+					""
+				],
+				[
+					"Packages/LaTeXing/LaTeX.sublime-build",
+					"Clean up Files"
+				]
+			],
+			[
+				"Packages/LaTeXing/LaTeX.sublime-build",
+				""
+			]
+		],
+		[
+			[
+				[
+					"Packages/LaTeXing/LaTeX.sublime-build",
+					""
+				],
+				[
+					"Packages/LaTeXing/LaTeX.sublime-build",
+					"Clean up Files"
+				],
+				[
+					"Packages/SublimeREPL/sublimerepl_build_system_hack.sublime-build",
+					""
+				]
+			],
+			[
+				"Packages/LaTeXing/LaTeX.sublime-build",
+				""
+			]
+		],
+		[
+			[
+				[
+					"Packages/MarkdownPreview/Markdown.sublime-build",
+					""
+				],
+				[
+					"Packages/SublimeREPL/sublimerepl_build_system_hack.sublime-build",
+					""
+				]
+			],
+			[
+				"Packages/MarkdownPreview/Markdown.sublime-build",
+				""
+			]
+		],
+		[
+			[
+				[
+					"Packages/Python/Python.sublime-build",
+					""
+				],
+				[
+					"Packages/Python/Python.sublime-build",
+					"Syntax Check"
+				],
+				[
+					"Packages/SendCode/build_systems/IPython - Source File.sublime-build",
+					""
+				],
+				[
+					"Packages/SublimeREPL/sublimerepl_build_system_hack.sublime-build",
+					""
+				]
+			],
+			[
+				"Packages/SendCode/build_systems/IPython - Source File.sublime-build",
+				""
+			]
+		],
+		[
+			[
+				[
+					"Packages/SendCode/support/Julia - Source File.sublime-build",
+					""
+				],
+				[
+					"Packages/SublimeREPL/sublimerepl_build_system_hack.sublime-build",
+					""
+				]
+			],
+			[
+				"Packages/SendCode/support/Julia - Source File.sublime-build",
+				""
+			]
+		],
+		[
+			[
+				[
+					"Packages/SublimeREPL/sublimerepl_build_system_hack.sublime-build",
+					""
+				],
+				[
+					"Packages/User/EViews.sublime-build",
+					""
+				]
+			],
+			[
+				"Packages/User/EViews.sublime-build",
+				""
+			]
+		],
+		[
+			[
+				[
+					"Packages/SublimeREPL/sublimerepl_build_system_hack.sublime-build",
+					""
+				],
+				[
+					"Packages/User/EViews/EViews.sublime-build",
+					""
+				]
+			],
+			[
+				"Packages/User/EViews/EViews.sublime-build",
+				""
+			]
+		]
+	],
+	"build_varint": "",
+	"command_palette":
+	{
+		"height": 0.0,
+		"last_filter": "",
+		"selected_items":
+		[
+			[
+				"inst",
+				"Package Control: Install Package"
+			],
+			[
+				"renam",
+				"File: Rename"
+			],
+			[
+				"clos",
+				"File: Close All"
+			],
+			[
+				"pand",
+				"Pandoc"
+			],
+			[
+				"arith",
+				"Arithmetic"
+			],
+			[
+				"ar",
+				"Arithmetic"
+			],
+			[
+				"ss ma",
+				"Set Syntax: Markdown"
+			],
+			[
+				"ss mar",
+				"Set Syntax: Markdown"
+			],
+			[
+				"close",
+				"File: Close All"
+			],
+			[
+				"ssma",
+				"Set Syntax: Markdown"
+			],
+			[
+				"rena",
+				"File: Rename"
+			],
+			[
+				"reanme",
+				"File: Rename"
+			],
+			[
+				"p",
+				"Pandoc"
+			],
+			[
+				"smar",
+				"Set Syntax: Markdown"
+			],
+			[
+				"packin",
+				"Package Control: Install Package"
+			],
+			[
+				"count",
+				"WordCount: Count Specific Words"
+			],
+			[
+				"packain",
+				"Package Control: Install Package"
+			],
+			[
+				"ss",
+				"Set Syntax: Markdown"
+			],
+			[
+				"view",
+				"PackageResourceViewer: Open Resource"
+			],
+			[
+				"vie",
+				"PackageResourceViewer: Open Resource"
+			],
+			[
+				"index",
+				"Help: Indexing Status"
+			],
+			[
+				"in",
+				"Help: Indexing Status"
+			],
+			[
+				"ssemailf",
+				"Set Syntax: Markdown (Email Frontmatter)"
+			],
+			[
+				"ss ema",
+				"Set Syntax: Markdown (Email Frontmatter)"
+			],
+			[
+				"ss emai",
+				"Set Syntax: Markdown (Email Frontmatter)"
+			],
+			[
+				"v",
+				"PackageResourceViewer: Open Resource"
+			],
+			[
+				"setting",
+				"Preferences: Settings – Syntax Specific"
+			],
+			[
+				"sche",
+				"UI: Select Color Scheme"
+			],
+			[
+				"ss email",
+				"Set Syntax: Markdown (Email Frontmatter)"
+			],
+			[
+				"reloa",
+				"Automatic Package Reloader: Reload Current Package"
+			],
+			[
+				"relo",
+				"Automatic Package Reloader"
+			],
+			[
+				"package",
+				"Package Control: List Packages"
+			],
+			[
+				"reload",
+				"Automatic Package Reloader: Reload Current Package"
+			],
+			[
+				"open",
+				"PackageResourceViewer: Open Resource"
+			],
+			[
+				"compa",
+				"Compare with..."
+			],
+			[
+				"ss pyth",
+				"Set Syntax: Python"
+			],
+			[
+				"resour",
+				"PackageResourceViewer: Open Resource"
+			],
+			[
+				"instal",
+				"Package Control: Install Package"
+			],
+			[
+				"them",
+				"UI: Select Theme"
+			],
+			[
+				"ss m",
+				"Set Syntax: Markdown"
+			],
+			[
+				"viewer",
+				"PackageResourceViewer: Open Resource"
+			],
+			[
+				"key",
+				"Preferences: Key Bindings"
+			],
+			[
+				"prefen",
+				"Preferences: Settings"
+			],
+			[
+				"packins",
+				"Package Control: Install Package"
+			],
+			[
+				"packre",
+				"Package Control: Remove Package"
+			],
+			[
+				"pack",
+				"Package Control: List Packages"
+			],
+			[
+				"theme",
+				"UI: Select Theme"
+			],
+			[
+				"preference",
+				"Preferences: Settings"
+			],
+			[
+				"pando",
+				"Pandoc"
+			],
+			[
+				"ss mark",
+				"Set Syntax: Markdown"
+			],
+			[
+				"pack in",
+				"Package Control: Install Package"
+			],
+			[
+				"json",
+				"Pretty JSON: Format JSON"
+			],
+			[
+				"SS MAR",
+				"Set Syntax: Markdown"
+			],
+			[
+				"js",
+				"Pretty JSON: Format JSON Lines"
+			],
+			[
+				"ss yam",
+				"Set Syntax: YAML"
+			],
+			[
+				"ss ya",
+				"Set Syntax: YAML"
+			],
+			[
+				"json p",
+				"Pretty JSON: Format JSON"
+			],
+			[
+				"ss js",
+				"Set Syntax: JSON"
+			],
+			[
+				"SS JSON",
+				"Set Syntax: JSON"
+			],
+			[
+				"move",
+				"File: Move"
+			],
+			[
+				"mo",
+				"File: Move"
+			],
+			[
+				"res",
+				"PackageResourceViewer: Open Resource"
+			],
+			[
+				"ari",
+				"Arithmetic"
+			],
+			[
+				"json pre",
+				"Pretty JSON: Format JSON"
+			],
+			[
+				"ssmar",
+				"Set Syntax: Markdown"
+			],
+			[
+				"markdow ss",
+				"Set Syntax: Markdown"
+			],
+			[
+				"dele",
+				"File: Delete"
+			],
+			[
+				"pandoc",
+				"Pandoc"
+			],
+			[
+				"mark",
+				"Mark selection for comparison"
+			],
+			[
+				"ren",
+				"File: Rename"
+			],
+			[
+				"prefernce",
+				"Preferences: Settings"
+			],
+			[
+				"settings",
+				"Preferences: Settings – Syntax Specific"
+			],
+			[
+				"compar",
+				"Compare with..."
+			],
+			[
+				"oririgh",
+				"Origami: Create Pane on the Right"
+			],
+			[
+				"ori rig",
+				"Origami: Create Pane on the Right"
+			],
+			[
+				"ori",
+				"Origami: Create Pane Below"
+			],
+			[
+				"orig",
+				"Origami: Create Pane Below"
+			],
+			[
+				"sel",
+				"Select wiki reference"
+			],
+			[
+				"packa sett",
+				"Preferences: Package Control Settings"
+			],
+			[
+				"origa",
+				"Origami: Create Pane Below"
+			],
+			[
+				"ss ",
+				"Set Syntax: Markdown"
+			],
+			[
+				"settings ",
+				"Preferences: MarkdownEditing Settings"
+			],
+			[
+				"sele",
+				"Select wiki reference"
+			],
+			[
+				"resource",
+				"PackageResourceViewer: Extract Package"
+			],
+			[
+				"select wiki",
+				"Select wiki reference"
+			],
+			[
+				"reloag",
+				"Automatic Package Reloader: Reload Current Package"
+			],
+			[
+				"origami",
+				"Origami: Create Pane Below"
+			],
+			[
+				"mak",
+				"Make wiki page reference"
+			],
+			[
+				"ma",
+				"Make wiki page reference"
+			],
+			[
+				"make",
+				"Make wiki page reference"
+			],
+			[
+				"com",
+				"Compare with..."
+			],
+			[
+				"MOVE",
+				"File: Move"
+			],
+			[
+				"COMPAR",
+				"Compare with..."
+			],
+			[
+				"RESOU",
+				"PackageResourceViewer: Open Resource"
+			],
+			[
+				"make ",
+				"Make wiki page reference"
+			],
+			[
+				"conver",
+				"MarkdownEditing: Convert Underlined Headings to ATX"
+			],
+			[
+				"find heading",
+				"MarkdownEditing: Fix Underlined Headings"
+			],
+			[
+				"heading",
+				"Snippet: Markdown Heading 5"
+			],
+			[
+				"previe",
+				"Markdown Preview: Preview in Browser"
+			],
+			[
+				"preview",
+				"Markdown Preview: Open Markdown Cheat sheet"
+			],
+			[
+				"ss markd",
+				"Set Syntax: Markdown (MDE)"
+			],
+			[
+				"a",
+				"Arithmetic"
+			],
+			[
+				"ss jsx",
+				"Set Syntax: JSX"
+			],
+			[
+				"del",
+				"File: Delete"
+			],
+			[
+				"previ",
+				"Markdown Preview: Preview in Browser"
+			],
+			[
+				"insta",
+				"Package Control: Install Package"
+			],
+			[
+				"sett",
+				"Preferences: Settings – Syntax Specific"
+			],
+			[
+				"schem",
+				"UI: Select Color Scheme"
+			],
+			[
+				"mardow sett",
+				"Preferences: MarkdownEditing Settings"
+			],
+			[
+				"ss ja",
+				"Set Syntax: JavaScript"
+			],
+			[
+				"scheme",
+				"UI: Select Color Scheme"
+			],
+			[
+				"open re",
+				"PackageResourceViewer: Open Resource"
+			],
+			[
+				"list p",
+				"Package Control: List Packages"
+			],
+			[
+				"view resou",
+				"PackageResourceViewer: Open Resource"
+			],
+			[
+				"packa list",
+				"Package Control: List Packages"
+			],
+			[
+				"ssm",
+				"Set Syntax: Markdown"
+			],
+			[
+				"uniqu",
+				"Permute Lines: Unique"
+			],
+			[
+				"pan",
+				"Pandoc"
+			],
+			[
+				"arih",
+				"Arithmetic"
+			],
+			[
+				"arit",
+				"Arithmetic"
+			],
+			[
+				"tablee",
+				"Table Editor: Enable for current view"
+			],
+			[
+				"SS MAKD",
+				"Set Syntax: Markdown"
+			],
+			[
+				"keybin",
+				"Preferences: Key Bindings"
+			],
+			[
+				"prewiew",
+				"Markdown Preview: Preview in Browser"
+			],
+			[
+				"au",
+				"Automatic Package Reloader"
+			],
+			[
+				"openres",
+				"PackageResourceViewer: Open Resource"
+			],
+			[
+				"openresou",
+				"PackageResourceViewer: Open Resource"
+			],
+			[
+				"",
+				"Arithmetic"
+			]
+		],
+		"width": 0.0
+	},
+	"console":
+	{
+		"height": 382.666666667,
+		"history":
+		[
+			"view.run_command(\"mde_make_page_reference\")",
+			"subprocess.run([\"start\", \"C:\\\\Users\\\\denni\\\\Bankwards GmbH\\\\Edgar Dennig - BANKWARDS_CORP\\\\FUNDING\\\\SFG\\\\ideenreich\\\\kostenRechnungIDEENREICHintern.xlsx\"])",
+			"subprocess.run([\"start\", \"C:\\Users\\denni\\Bankwards GmbH\\Edgar Dennig - BANKWARDS_CORP\\FUNDING\\SFG\\ideenreich\\kostenRechnungIDEENREICHintern.xlsx\"])",
+			"subprocess.run([\"start\", \"C:\\\\Users\\\\denni\\\\Bankwards GmbH\\\\Edgar Dennig - BANKWARDS_CORP\\\\FUNDING\\\\SFG\\\\ideenreich\\\\kostenRechnungIDEENREICHintern.xlsx\"])",
+			"subprocess.run([\"start\", \"C:\\Users\\denni\\Bankwards GmbH\\Edgar Dennig - BANKWARDS_CORP\\FUNDING\\SFG\\ideenreich\\kostenRechnungIDEENREICHintern.xlsx\"])",
+			"import subprocess",
+			"window.run_command(\"side_bar_open\", {\"paths\": [\"C:\\\\Users\\\\denni\\\\Bankwards GmbH\\\\Edgar Dennig - BANKWARDS_CORP\\\\FUNDING\\\\SFG\\\\ideenreich\\\\kostenRechnungIDEENREICHintern.xlsx\"]})",
+			"window.run_command(\"sidebar_open\", {\"paths\": [\"C:\\\\Users\\\\denni\\\\Bankwards GmbH\\\\Edgar Dennig - BANKWARDS_CORP\\\\FUNDING\\\\SFG\\\\ideenreich\\\\kostenRechnungIDEENREICHintern.xlsx\"]})",
+			"window.run_command(\"sidebar_open\", {\"paths\": [\"C:\\\\Users\\\\denni\\\\Bankwards GmbH\\\\Edgar Dennig - BANKWARDS_CORP\\\\FUNDING\\\\SFG\\\\ideenreich\\\\kostenRechnungIDEENREICHintern.xlsx\"]}",
+			"window.run_command(\"sidebar_open\", \"args\": {\"paths\": [\"C:\\\\Users\\\\denni\\\\Bankwards GmbH\\\\Edgar Dennig - BANKWARDS_CORP\\\\FUNDING\\\\SFG\\\\ideenreich\\\\kostenRechnungIDEENREICHintern.xlsx\"]}",
+			"asdf",
+			"view.run_command(\"open_linked_file\")",
+			"view.word(view.sel()[0])",
+			"view.sel()[0]",
+			"view.word(view.sel()[0])",
+			"view.sel()[0]",
+			"view.word(view.sel()[0])",
+			"view.sel()[0]",
+			"t",
+			"asdfa",
+			"d",
+			"dafl;k",
+			"view.run_command(\"side_bar_files_open_with\", {\"paths\": [\"C:\\\\Users\\\\denni\\\\Downloads\\\\edennigSVDA.pdf\"], \"application\": \"C:\\\\Program Files\\\\Mozilla Firefox\\\\firefox.exe\", \"extensions\": \".*\", \"args\": []})",
+			"view.sel()[0]-1",
+			"view.sel()[0]",
+			"view.sel()",
+			"view.sel)=",
+			"view.sel()[0].begin()",
+			"view.sel()[1]",
+			"view.sel()[0]",
+			"view.sel()",
+			"view.word(view.sel()[0])",
+			"print(x)",
+			"x = re.match(\"^\\s+$\", \"  \")",
+			"print(x)",
+			"x = re.match(\"^\\s+$\", \" d \")",
+			"re.match(\"^\\s+$\", \" d \")",
+			"re.match(\"^\\\\s+$\", \" d \")",
+			"re.match(\"^\\s+$\", \" d \")",
+			"re.match(r\"^\\s+$\", \" d \")",
+			"re.match(r\"^\\s+$\", \"  \")",
+			"re.match(\"^\\s+$\", \"  \")",
+			"import re",
+			"view.word(view.sel()[0])",
+			"view.sel()[0]",
+			"view.word(view.sel()[0])",
+			"view.word(view.sel()[0]))",
+			"view.sel()[0]",
+			"view.word(view.sel()[0])",
+			"view.sel()[0]",
+			"view.word(view.sel()[0])",
+			"test",
+			"ds",
+			"xx = WikiPage(window.view())",
+			"print(view.scope_name(view.sel()[0].begin()))",
+			"print(view.substr(view.extract_scope(view.sel()[0].begin())))",
+			"print(view.extract_scope(view.sel()[0].begin()))",
+			"print(view.sel()[0].begin())",
+			"print(view.extract_scope(view.sel()[0].begin()))",
+			"print(view.extract_scope(view.sel()[0]))",
+			"print(view.extract_scope(view.sel().begin()))",
+			"print(view.extract_scope(sublime.Point))",
+			"print(view.extract_scope(sublime.Point()))",
+			"print(view.extract_scope(view.Point()))",
+			"print(view.extract_scope(view.sel()[0]))",
+			"print(view.extract_scope(view.sel()))",
+			"print(view.extract_scope())",
+			"view.run_command('show_scope_name')",
+			";",
+			"q",
+			"view.run_command('show_scope_name')",
+			"show_scope_name()",
+			"import socket; socket.socket(socket.AF_INET, socket.SOCK_STREAM).connect((\"localhost\", 54371))"
+		]
+	},
+	"distraction_free":
+	{
+		"menu_visible": false,
+		"show_minimap": false,
+		"show_open_files": false,
+		"show_tabs": false,
+		"side_bar_visible": false,
+		"status_bar_visible": false
+	},
+	"expanded_folders":
+	[
+		"/C/code/currency",
+		"/C/code/currency/source"
+	],
+	"file_history":
+	[
+		"/C/code/currency/data_analysis_functions.py",
+		"/C/code/currency/requirements.txt",
+		"/C/Users/francis.dennig/OneDrive - United Nations Development Programme/UNDPnotes/Meetings2025.md",
+		"/C/Users/francis.dennig/OneDrive - United Nations Development Programme/UNDPnotes/people/andrewKuriaGithaiga.md",
+		"/C/Users/francis.dennig/OneDrive/notes/notes/todo.md",
+		"/C/Users/francis.dennig/OneDrive - United Nations Development Programme/UNDPnotes/emails/Email_2025-09-29_1548 @Sandy Daoud - Shortlist 28126 - Energy Specialist - IPSA-10 - 223953 - ....md",
+		"/C/Users/francis.dennig/OneDrive - United Nations Development Programme/UNDPnotes/emails/Email_2025-10-01_1255 @Cristina Altomare - Re Saturno Illomei - Formiche - Silvia Sciubba - Franciscan..md",
+		"/C/Users/francis.dennig/OneDrive - United Nations Development Programme/UNDPnotes/emails/Email_2025-10-01_1229 @Roxani Roushas - Re Saturno Illomei - Formiche - Silvia Sciubba - Franciscan..md",
+		"/C/Users/francis.dennig/OneDrive - United Nations Development Programme/UNDPnotes/emails/Email_2025-10-01_1223 @Fethia Kahssay - RE Request for SL approval - 28348- Energy Finance Specil....md",
+		"/C/Users/francis.dennig/OneDrive - United Nations Development Programme/UNDPnotes/emails/Email_2025-10-01_1214 @Andrew Kuria Githaiga - RE UNDP pipeline support work.md",
+		"/C/Users/francis.dennig/OneDrive - United Nations Development Programme/UNDPnotes/docs memos etc/EnergyForGrowthConceptNote.md",
+		"/C/Users/francis.dennig/OneDrive - United Nations Development Programme/UNDPnotes/emails/Email_2025-09-30_0853 @Fethia Kahssay - RE Request for SL approval - 28348- Energy Finance Specil....md",
+		"/C/Users/francis.dennig/OneDrive - United Nations Development Programme/UNDPnotes/resources/LUISSfinancingTheEnergyTransition.md",
+		"/C/Users/francis.dennig/OneDrive - United Nations Development Programme/UNDPnotes/emails/Email_2025-10-01_0933 @Evans Khobo - Re Confirmation of Expenditure for Energy for Growth (11.....md",
+		"/C/Users/francis.dennig/OneDrive/notes/resources/climateResources/WB documents/Climate and financial sector links jooste.docx",
+		"/C/Users/francis.dennig/OneDrive - United Nations Development Programme/UNDPnotes/emails/Email_2025-09-15_1244 @DGMO, Ufficio 3 - ROME PROCESS – Fifth virtual meeting of the WG on Climate....md",
+		"/C/Users/francis.dennig/OneDrive - United Nations Development Programme/UNDPnotes/people/mphoMataboge.md",
+		"/C/code/currency/currency_devaluation_events_inverse.csv",
+		"/C/Users/francis.dennig/OneDrive - United Nations Development Programme/UNDPnotes/emails/Email_2025-09-29_1051 @Giacomo Gallina - Re RE Request for Meeting – Super Credito Model Consultation.md",
+		"/C/Users/francis.dennig/OneDrive - United Nations Development Programme/UNDPnotes/emails/Email_2025-09-29_1058 @Nargis Sharshekeeva - RE KenGen conference participation PO # 10441704 for US$ ....md",
+		"/C/Users/francis.dennig/OneDrive - United Nations Development Programme/UNDPnotes/emails/Email_2025-09-29_1303 @Agostino Inguscio - Re Follow Up from WFP Rome Process - WG Climate and Energ....md",
+		"/C/Users/francis.dennig/OneDrive - United Nations Development Programme/UNDPnotes/emails/Email_2025-09-29_1258 @Shannon WANG - Follow Up from WFP Rome Process - WG Climate and Energy -....md",
+		"/C/Users/francis.dennig/OneDrive - United Nations Development Programme/UNDPnotes/emails/Email_2025-09-29_1129 @Jessica Stephens - Re Intro JessicaFrancis.md",
+		"/C/Users/francis.dennig/OneDrive - United Nations Development Programme/UNDPnotes/emails/Email_2025-09-29_0932 @UNall Services - Education Grant School HRC0699175 has been opened.md",
+		"/C/Users/francis.dennig/OneDrive - United Nations Development Programme/UNDPnotes/emails/Email_2025-09-21_1755 @Salka Mariem Mohamed - Logistics - Strengthening the partnership and request for....md",
+		"/C/Users/francis.dennig/OneDrive - United Nations Development Programme/UNDPnotes/emails/Email_2025-03-10_1345 @FCC Accounting System for QuickBooks - You received an electronic invoice from Piccolo Mondo Scu....md",
+		"/C/Users/francis.dennig/OneDrive - United Nations Development Programme/UNDPnotes/emails/Email_2025-09-24_1153 @FCC Accounting System for QuickBooks - You received an electronic invoice from Piccolo Mondo Scu....md",
+		"/C/Users/francis.dennig/OneDrive - United Nations Development Programme/UNDPnotes/emails/Email_2025-08-25_1826 @FCC Accounting System for QuickBooks - You received an electronic invoice from Piccolo Mondo Scu....md",
+		"/C/Users/francis.dennig/OneDrive - United Nations Development Programme/UNDPnotes/emails/Email_2025-07-22_1550 @FCC Accounting System for QuickBooks - You received an electronic invoice from Piccolo Mondo Scu....md",
+		"/C/Users/francis.dennig/OneDrive - United Nations Development Programme/UNDPnotes/emails/Email_2025-03-10_1221 @Piccolo Mondo Scuola Elementare e Materna Srl - Fattura 20250705 da Piccolo Mondo Scuola Elementare e Mat....md",
+		"/C/Users/francis.dennig/OneDrive - United Nations Development Programme/UNDPnotes/emails/Email_2025-07-23_1107 @Piccolo Mondo Scuola Elementare e Materna Srl - Fattura 20251250 da Piccolo Mondo Scuola Elementare e Mat....md",
+		"/C/Users/francis.dennig/OneDrive - United Nations Development Programme/UNDPnotes/emails/Email_2025-08-26_1210 @Piccolo Mondo Scuola Elementare e Materna Srl - Fattura 20251399 da Piccolo Mondo Scuola Elementare e Mat....md",
+		"/C/Users/francis.dennig/OneDrive - United Nations Development Programme/UNDPnotes/emails/Email_2025-09-24_1129 @Piccolo Mondo Scuola Elementare e Materna Srl - Fattura 20251541 da Piccolo Mondo Scuola Elementare e Mat....md",
+		"/C/Users/francis.dennig/OneDrive - United Nations Development Programme/UNDPnotes/emails/Email_2025-09-29_1311 @Agostino Inguscio - RE ProDoc Phase II.md",
+		"/C/Users/francis.dennig/OneDrive - United Nations Development Programme/UNDPnotes/emails/Email_2025-09-29_1317 @Yvonne Nyokabi - Re APPRECIATION AND FOLLOW UP ON MEETING WITH TRADE DEPAR....md",
+		"/C/Users/francis.dennig/OneDrive - United Nations Development Programme/UNDPnotes/emails/Email_2025-09-29_1319 @Agostino Inguscio - RE Follow Up from WFP Rome Process - WG Climate and Energ....md",
+		"/C/Users/francis.dennig/OneDrive - United Nations Development Programme/UNDPnotes/docs memos etc/Rome Process Advanced Pipeline Evaluation.md",
+		"/C/Users/francis.dennig/OneDrive - United Nations Development Programme/UNDPnotes/docs memos etc/romeProcess.md",
+		"/C/Users/francis.dennig/OneDrive - United Nations Development Programme/UNDPnotes/emails/Email_2025-09-29_0745 @The Economist - The World in Brief Russia strikes Kyiv.md",
+		"/C/Users/francis.dennig/OneDrive - United Nations Development Programme/UNDPnotes/emails/Email_2025-09-29_0900 @Adeola Adebiyi - Mauritania PERZI Info Request.md",
+		"/C/Users/francis.dennig/OneDrive - United Nations Development Programme/UNDPnotes/emails/Email_2025-09-25_1802 @Sunday Jerome Salami - Brief for Valeria.md",
+		"/C/Users/francis.dennig/OneDrive - United Nations Development Programme/UNDPnotes/docs memos etc/Italy UNDP Energy Partnership Expenditure 2024.md",
+		"/C/Users/francis.dennig/OneDrive - United Nations Development Programme/UNDPnotes/emails/Email_2025-09-26_1657 @Zimei Valeria - 2nd E4G JWG - recording and transcripts.md",
+		"/C/Users/francis.dennig/OneDrive - United Nations Development Programme/UNDPnotes/emails/Email_2025-09-24_1633 @Jules Isamukumbu Kikanda - RE Strengthening the partnership and request for Support ....md",
+		"/C/Users/francis.dennig/OneDrive - United Nations Development Programme/UNDPnotes/emails/Email_2025-09-24_1541 @Nargis Sharshekeeva - RE KenGen conference participation PO # 10441704 for US$ ....md",
+		"/C/Users/francis.dennig/OneDrive - United Nations Development Programme/UNDPnotes/emails/Email_2025-09-24_1405 @Duccio Tenti - Re UNDP Rome Centre - India.md",
+		"/C/Users/francis.dennig/OneDrive - United Nations Development Programme/UNDPnotes/emails/Email_2025-09-24_1354 @Adeola Adebiyi - Fw Room Reservation Request - Réservation de chambres – M....md",
+		"/C/Users/francis.dennig/OneDrive - United Nations Development Programme/UNDPnotes/emails/Email_2025-09-24_1323 @Gulgun Sahin - RE GIZ interns visito to the Centre  Oct. 8.md",
+		"/C/Users/francis.dennig/OneDrive - United Nations Development Programme/UNDPnotes/emails/Email_2025-09-24_1315 @Duccio Tenti - Re 250207 lj  I Opportunita collaborazione United Nations....md",
+		"/C/Users/francis.dennig/OneDrive - United Nations Development Programme/UNDPnotes/emails/Email_2025-09-24_1308 @Duccio Tenti - Re UNDP Rome Centre - India.md",
+		"/C/Users/francis.dennig/OneDrive - United Nations Development Programme/UNDPnotes/emails/Email_2025-09-24_1245 @Dele Ojo - RE Meeting with Moreva Capital.md",
+		"/C/Users/francis.dennig/OneDrive - United Nations Development Programme/UNDPnotes/emails/Email_2025-09-24_1242 @Edd Denbee - info about the events in Sao Paulo.md",
+		"/C/Users/francis.dennig/OneDrive - United Nations Development Programme/UNDPnotes/emails/Email_2025-09-24_1142 @Ilham Talab GET.invest - Sao Paulo - Bloomberg Philanthropies .md",
+		"/C/Users/francis.dennig/OneDrive - United Nations Development Programme/UNDPnotes/emails/Email_2025-09-24_1123 @Omer Kavuk - Rome Center SharePoint Pages - E4G.md",
+		"/C/Users/francis.dennig/OneDrive - United Nations Development Programme/UNDPnotes/emails/Email_2025-09-24_1047 @Mpho Mataboge - Re Way Foward.md",
+		"/C/Users/francis.dennig/OneDrive - United Nations Development Programme/UNDPnotes/emails/Email_2025-09-23_2157 @Duccio Tenti - 250207 lj  I Opportunita collaborazione United Nations De....md",
+		"/C/Users/francis.dennig/OneDrive - United Nations Development Programme/UNDPnotes/emails/Email_2025-09-24_1751 @Mpho Mataboge - Mpho Mataboge assigned you a task in E4G JWC Brief_24092025.md",
+		"/C/Users/francis.dennig/OneDrive - United Nations Development Programme/UNDPnotes/emails/Email_2025-09-24_1644 @Adeola Adebiyi - Fw Room Reservation Request - Réservation de chambres - M....md",
+		"/C/Users/francis.dennig/OneDrive - United Nations Development Programme/UNDPnotes/emails/Email_2025-09-25_1105 @Fethia Kahssay - RE Request for SL approval - 28348- Energy Finance Specil....md",
+		"/C/Users/francis.dennig/OneDrive - United Nations Development Programme/UNDPnotes/emails/Email_2025-09-25_1029 @UNall Services - Travel Request  TR00541625forFrancis Dennig requires your....md",
+		"/C/Users/francis.dennig/OneDrive - United Nations Development Programme/UNDPnotes/emails/Email_2025-09-25_0958 @Mpho Mataboge - RE Update on ECS and presentation.md",
+		"/C/Users/francis.dennig/OneDrive - United Nations Development Programme/UNDPnotes/emails/Email_2025-09-25_0942 @Giacomo Gallina - Re Hypoport Africa - Mozambique Introduction.md",
+		"/C/Users/francis.dennig/OneDrive - United Nations Development Programme/UNDPnotes/emails/Email_2025-09-25_0810 @Carlotta DElia - Re Inception Meeting with Advisory Company.md",
+		"/C/Users/francis.dennig/OneDrive - United Nations Development Programme/UNDPnotes/emails/Email_2025-09-25_0227 @American Express Global Business Travel - NEW INVOICE 0026980 -AIR RESHOP EXPERT FOUND A LOWER FARE....md",
+		"/C/Users/francis.dennig/OneDrive - United Nations Development Programme/UNDPnotes/emails/Email_2025-09-24_2139 @Roxani Roushas - Re ProDoc Phase II.md",
+		"/C/Users/francis.dennig/OneDrive - United Nations Development Programme/UNDPnotes/emails/Email_2025-09-24_2132 @Gulgun Sahin - Re ProDoc Phase II.md",
+		"/C/Users/francis.dennig/OneDrive - United Nations Development Programme/UNDPnotes/emails/Email_2025-09-24_2111 @Roxani Roushas - Re ProDoc Phase II.md",
+		"/C/Users/francis.dennig/OneDrive - United Nations Development Programme/UNDPnotes/emails/Email_2025-09-24_2107 @us.undp.travel@amexgbt.com - Re Transient and Preferred fare KK    DENNIGFRANCIS      ....md",
+		"/C/Users/francis.dennig/OneDrive - United Nations Development Programme/UNDPnotes/emails/Email_2025-09-24_1843 @Kigha Benyoh - Progress report  Jan 2024 - Dec 2024.md",
+		"/C/Users/francis.dennig/OneDrive - United Nations Development Programme/UNDPnotes/emails/Email_2025-09-24_1800 @Gordon Archer - Re Meeting Up.md",
+		"/C/Users/francis.dennig/OneDrive - United Nations Development Programme/UNDPnotes/emails/Email_2025-09-25_1124 @UNall Services - Travel Request  TR00541625 for Francis Dennig is transfer....md",
+		"/C/Users/francis.dennig/OneDrive/notes/notes/resources/Country Engagement Report - Template.md",
+		"/C/Users/francis.dennig/OneDrive - United Nations Development Programme/UNDPnotes/resources/MASEmouList.md",
+		"/C/Users/francis.dennig/OneDrive - United Nations Development Programme/UNDPnotes/emails/Email_2024-11-05_1543 @Francis Dennig - RE meeting.md",
+		"/C/Users/francis.dennig/OneDrive - United Nations Development Programme/UNDPnotes/emails/Email_2025-09-25_1602 @Giacomo Gallina - Re RE Consultation on De-risking Mechanisms for Renewable....md",
+		"/C/Users/francis.dennig/OneDrive - United Nations Development Programme/UNDPnotes/emails/Email_2025-09-25_1558 @Fethia Kahssay - RE Request for SL approval - 28348- Energy Finance Specil....md",
+		"/C/Users/francis.dennig/OneDrive - United Nations Development Programme/UNDPnotes/emails/Email_2025-09-25_1438 @Salka Mariem Mohamed - RE Logistics - Strengthening the partnership and request ....md",
+		"/C/Users/francis.dennig/OneDrive - United Nations Development Programme/UNDPnotes/emails/Email_2025-09-25_1431 @Adeola Adebiyi - Re Logistics - Strengthening the partnership and request ....md",
+		"/C/Users/francis.dennig/OneDrive - United Nations Development Programme/UNDPnotes/emails/Email_2025-09-25_1328 @Mpho Mataboge - RE Monthly Meeting  PISTA  Energy For Growth.md",
+		"/C/Users/francis.dennig/OneDrive - United Nations Development Programme/UNDPnotes/emails/Email_2025-09-25_1324 @Sunday Jerome Salami - Sunday Jerome Salami shared the folder JWC Meetings with you.md",
+		"/C/Users/francis.dennig/OneDrive - United Nations Development Programme/UNDPnotes/emails/Email_2025-09-25_1238 @Mpho Mataboge - RE Update on ECS and presentation.md",
+		"/C/Users/francis.dennig/OneDrive - United Nations Development Programme/UNDPnotes/emails/Email_2025-09-25_1236 @Daniele Guidi - R Update on ECS and presentation.md",
+		"/C/Users/francis.dennig/OneDrive - United Nations Development Programme/UNDPnotes/emails/Email_2025-09-25_1235 @Ilham Talab GET.invest - UNDP Malawi - SHS company support .md",
+		"/C/Users/francis.dennig/OneDrive - United Nations Development Programme/UNDPnotes/emails/Email_2025-09-25_1206 @Pinna Giulia - R 250207 lj  I Opportunita collaborazione United Nations ....md",
+		"/C/Users/francis.dennig/OneDrive - United Nations Development Programme/UNDPnotes/emails/Email_2025-09-25_1205 @Stefania Rojas - Re Transient and Preferred fare KK    DENNIGFRANCIS      ....md",
+		"/C/Users/francis.dennig/OneDrive - United Nations Development Programme/UNDPnotes/emails/Email_2025-09-25_1151 @MOCTAR, CHEIKH - RE PROREV+PERZI joint AfDB+RFPP funding.md",
+		"/C/Users/francis.dennig/OneDrive - United Nations Development Programme/UNDPnotes/emails/Email_2025-09-25_1139 @Gulgun Sahin - Booth Etiquette.md",
+		"/C/Users/francis.dennig/OneDrive - United Nations Development Programme/UNDPnotes/emails/Email_2025-08-08_0900 @Nicola Cremis - R 250207 lj  I Opportunita collaborazione United Nations ....md",
+		"/C/Users/francis.dennig/OneDrive - United Nations Development Programme/UNDPnotes/emails/Email_2025-09-16_0058 @Sire Abdoul Diallo - One-Pager on Investment Roundtable in DC.md",
+		"/C/Users/francis.dennig/OneDrive - United Nations Development Programme/UNDPnotes/emails/Email_2025-09-24_0908 @Fethia Kahssay - RE Shortlisting Matrix- 28348- Energy Finance Specilist-N....md",
+		"/C/Users/francis.dennig/OneDrive - United Nations Development Programme/UNDPnotes/emails/Email_2025-09-24_0646 @Jessica Stephens - Re Intro JessicaFrancis.md",
+		"/C/Users/francis.dennig/OneDrive - United Nations Development Programme/UNDPnotes/emails/Email_2025-09-23_2117 @Ilham Talab GET.invest - RE Energy and digital links  GET.investUNDP Rome .md",
+		"/C/Users/francis.dennig/OneDrive - United Nations Development Programme/UNDPnotes/emails/Email_2025-09-23_1939 @Sunday Jerome Salami - Brief for JWC.md",
+		"/C/Users/francis.dennig/OneDrive - United Nations Development Programme/UNDPnotes/emails/Email_2025-09-23_1939 @Mariagiovanna Costa - RE Partnership between UNV-UNDP Rome Center for Climate a....md",
+		"/C/Users/francis.dennig/OneDrive - United Nations Development Programme/UNDPnotes/emails/Email_2025-09-23_1846 @Duccio Tenti - UNDP Rome Centre - India.md",
+		"/C/Users/francis.dennig/OneDrive - United Nations Development Programme/UNDPnotes/emails/Email_2025-09-23_1858 @Duccio Tenti - Re UNDP Rome Centre - India.md",
+		"/C/Users/francis.dennig/OneDrive - United Nations Development Programme/UNDPnotes/emails/Email_2025-09-23_1748 @Mpho Mataboge - RE UNDP Pipeline - Kenya and Zambia projects.md",
+		"/C/Users/francis.dennig/OneDrive - United Nations Development Programme/UNDPnotes/emails/Email_2025-09-23_1631 @Yousri Helal - RE TdR pour expert on energiefinance.md",
+		"/C/Users/francis.dennig/OneDrive - United Nations Development Programme/UNDPnotes/emails/Email_2025-09-23_1626 @Fidele Habimana - Re Request for PC Issue Details and Team Feedback for App....md",
+		"/C/Users/francis.dennig/OneDrive - United Nations Development Programme/UNDPnotes/emails/Email_2025-09-23_1612 @Sandy Daoud - RE Unavailable shortlisters Shortlist 28126 - Energy Spec....md",
+		"/C/Users/francis.dennig/OneDrive - United Nations Development Programme/UNDPnotes/emails/Email_2025-09-23_1602 @MohamedAymen Khaldi - RE TdR pour expert on energiefinance.md",
+		"/C/Users/francis.dennig/OneDrive - United Nations Development Programme/UNDPnotes/emails/Email_2025-09-23_1558 @Aine Stapleton - Dr. Ngozi Okonjo-Iweala, Queen Máxima, and Dr. Tedros Adh....md",
+		"/C/Users/francis.dennig/OneDrive - United Nations Development Programme/UNDPnotes/emails/Email_2025-09-23_1545 @Hanaan Marwah - Intro JessicaFrancis.md",
+		"/C/Users/francis.dennig/OneDrive - United Nations Development Programme/UNDPnotes/emails/Email_2025-09-24_1020 @Joseph Njuguna - Way Foward.md",
+		"/C/Users/francis.dennig/OneDrive - United Nations Development Programme/UNDPnotes/emails/Email_2025-03-03_1510 @Pansini Annalidia - I RPFF_MASE meeting proposals.md",
+		"/C/Users/francis.dennig/OneDrive - United Nations Development Programme/UNDPnotes/emails/Email_2025-02-28_1834 @Pansini Annalidia - Fw RPFF_MASE meeting proposals.md",
+		"/C/Users/francis.dennig/OneDrive - United Nations Development Programme/UNDPnotes/emails/Email_2025-02-26_1555 @Agostino Inguscio - FW Processo di Roma -  trasmissione alla membership del n....md",
+		"/C/Users/francis.dennig/OneDrive - United Nations Development Programme/UNDPnotes/emails/Email_2025-02-20_1627 @Cutillo Giampaolo - R Rome Process _ Working group on climate and energy - Co....md",
+		"/C/Users/francis.dennig/OneDrive - United Nations Development Programme/UNDPnotes/emails/Email_2025-02-19_1234 @Anaoly Blanco - RE Rome Process _ Working group on climate and energy - C....md",
+		"/C/Users/francis.dennig/OneDrive - United Nations Development Programme/UNDPnotes/emails/Email_2025-04-01_1740 @Cutillo Giampaolo - Rome Process - 4th Working group on Climate and Energy (1....md",
+		"/C/Users/francis.dennig/OneDrive - United Nations Development Programme/UNDPnotes/emails/Email_2025-03-21_1455 @Fidanza Alessandra - Invio schede MASE.md",
+		"/C/Users/francis.dennig/OneDrive - United Nations Development Programme/UNDPnotes/emails/Email_2025-03-17_1003 @Pansini Annalidia - I ROME PROCESS - Working Group on Climate and Energy - Up....md",
+		"/C/Users/francis.dennig/OneDrive - United Nations Development Programme/UNDPnotes/emails/Email_2025-04-28_1542 @Shaima Hussain Gargash - RE Rome Process - 4th Working group on Climate and Energy....md",
+		"/C/Users/francis.dennig/OneDrive - United Nations Development Programme/UNDPnotes/emails/Email_2025-04-07_1210 @Francis Dennig - Fw Rome Process - 4th Working group on Climate and Energy....md",
+		"/C/Users/francis.dennig/OneDrive - United Nations Development Programme/UNDPnotes/emails/Email_2025-06-05_1554 @Cutillo Giampaolo - Rome Process - 5th Meeting of the Working group on Climat....md",
+		"/C/Users/francis.dennig/OneDrive - United Nations Development Programme/UNDPnotes/emails/Email_2025-05-23_2045 @Anaoly Blanco - RE Technical Team Rome Process WG ClimEner NEXT STEPS.md",
+		"/C/Users/francis.dennig/OneDrive - United Nations Development Programme/UNDPnotes/emails/Email_2025-05-07_1938 @Francis Dennig - Re Rome Process - 4th Working group on Climate and Energy....md",
+		"/C/Users/francis.dennig/OneDrive - United Nations Development Programme/UNDPnotes/emails/Email_2025-05-06_1939 @Francis Dennig - Technical Team meeting May 9th.md",
+		"/C/Users/francis.dennig/OneDrive - United Nations Development Programme/UNDPnotes/emails/Email_2025-05-05_1436 @DGMO, Ufficio 3 - ROME PROCESS – WG on Climate and Energy – Technical Team'....md",
+		"/C/Users/francis.dennig/OneDrive - United Nations Development Programme/UNDPnotes/emails/Email_2025-06-17_1302 @Hamda Khalfan Salem Alkuwaiti - RE Technical Team Rome Process WG ClimEner NEXT STEPS.md",
+		"/C/Users/francis.dennig/OneDrive - United Nations Development Programme/UNDPnotes/emails/Email_2025-06-05_1702 @Francis Dennig - Fw Technical Team Rome Process WG ClimEner NEXT STEPS.md",
+		"/C/Users/francis.dennig/OneDrive - United Nations Development Programme/UNDPnotes/emails/Email_2025-06-27_2057 @Martinelli Ludovica Tancredi - R Technical Team Rome Process WG ClimEner NEXT STEPS.md",
+		"/C/Users/francis.dennig/OneDrive - United Nations Development Programme/UNDPnotes/emails/Email_2025-07-16_1711 @DGMO, Ufficio 3 - Rome Process - 5th Meeting of the Working group on Climat....md",
+		"/C/Users/francis.dennig/OneDrive - United Nations Development Programme/UNDPnotes/emails/Email_2025-07-25_1701 @Shaima Hussain Gargash - RE Rome Process - 5th Meeting of the Working group on Cli....md",
+		"/C/Users/francis.dennig/OneDrive - United Nations Development Programme/UNDPnotes/emails/Email_2025-08-12_1216 @DGMO, Ufficio 3 - Rome Process – Working group on Climate and Energy – Meet....md",
+		"/C/Users/francis.dennig/OneDrive - United Nations Development Programme/UNDPnotes/emails/Email_2025-09-02_1328 @DGMO, Ufficio 3 - Rome Process – Co-ChairsAfDB Meeting (September 9).md",
+		"/C/Users/francis.dennig/OneDrive - United Nations Development Programme/UNDPnotes/emails/Email_2025-09-01_1935 @SCHROTH, DANIEL - RE Rome Process – Co-Chairs Meeting (13th August 2025) – ....md",
+		"/C/Users/francis.dennig/OneDrive - United Nations Development Programme/UNDPnotes/emails/Email_2025-09-17_1301 @DGMO, Ufficio 3 - Rome Process - WG Climate and Energy - Technical meeting ....md"
+	],
+	"find":
+	{
+		"height": 36.0
+	},
+	"find_in_files":
+	{
+		"height": 728.0,
+		"where_history":
+		[
+		]
+	},
+	"find_state":
+	{
+		"case_sensitive": false,
+		"find_history":
+		[
+		],
+		"highlight": true,
+		"in_selection": false,
+		"preserve_case": false,
+		"regex": false,
+		"replace_history":
+		[
+		],
+		"reverse": false,
+		"scrollbar_highlights": true,
+		"show_context": true,
+		"use_buffer2": true,
+		"use_gitignore": true,
+		"whole_word": false,
+		"wrap": true
+	},
+	"groups":
+	[
+		{
+			"sheets":
+			[
+				{
+					"buffer": 0,
+					"file": "README.md",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 1577,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								806,
+								806
+							]
+						],
+						"settings":
+						{
+							"bracket_highlighter.busy": false,
+							"bracket_highlighter.locations":
+							{
+								"close":
+								{
+								},
+								"icon":
+								{
+								},
+								"open":
+								{
+								},
+								"unmatched":
+								{
+								}
+							},
+							"bracket_highlighter.regions":
+							[
+								"bh_angle",
+								"bh_angle_center",
+								"bh_angle_open",
+								"bh_angle_close",
+								"bh_angle_content",
+								"bh_c_define",
+								"bh_c_define_center",
+								"bh_c_define_open",
+								"bh_c_define_close",
+								"bh_c_define_content",
+								"bh_curly",
+								"bh_curly_center",
+								"bh_curly_open",
+								"bh_curly_close",
+								"bh_curly_content",
+								"bh_default",
+								"bh_default_center",
+								"bh_default_open",
+								"bh_default_close",
+								"bh_default_content",
+								"bh_double_quote",
+								"bh_double_quote_center",
+								"bh_double_quote_open",
+								"bh_double_quote_close",
+								"bh_double_quote_content",
+								"bh_regex",
+								"bh_regex_center",
+								"bh_regex_open",
+								"bh_regex_close",
+								"bh_regex_content",
+								"bh_round",
+								"bh_round_center",
+								"bh_round_open",
+								"bh_round_close",
+								"bh_round_content",
+								"bh_single_quote",
+								"bh_single_quote_center",
+								"bh_single_quote_open",
+								"bh_single_quote_close",
+								"bh_single_quote_content",
+								"bh_square",
+								"bh_square_center",
+								"bh_square_open",
+								"bh_square_close",
+								"bh_square_content",
+								"bh_tag",
+								"bh_tag_center",
+								"bh_tag_open",
+								"bh_tag_close",
+								"bh_tag_content",
+								"bh_unmatched",
+								"bh_unmatched_center",
+								"bh_unmatched_open",
+								"bh_unmatched_close",
+								"bh_unmatched_content"
+							],
+							"mde.match_heading_hashes": false,
+							"syntax": "Packages/User/MarkdownEmailFrontMatterExtension.sublime-syntax",
+							"tab_size": 4,
+							"translate_tabs_to_spaces": true
+						},
+						"translation.x": 0.0,
+						"translation.y": 519.333333333,
+						"zoom_level": 1.0
+					},
+					"stack_index": 1,
+					"stack_multiselect": false,
+					"type": "text"
+				},
+				{
+					"buffer": 1,
+					"file": "source/data_analysis_functions.py",
+					"selected": true,
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 20212,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								157,
+								157
+							]
+						],
+						"settings":
+						{
+							"bracket_highlighter.busy": false,
+							"bracket_highlighter.locations":
+							{
+								"close":
+								{
+								},
+								"icon":
+								{
+								},
+								"open":
+								{
+								},
+								"unmatched":
+								{
+								}
+							},
+							"bracket_highlighter.regions":
+							[
+								"bh_angle",
+								"bh_angle_center",
+								"bh_angle_open",
+								"bh_angle_close",
+								"bh_angle_content",
+								"bh_c_define",
+								"bh_c_define_center",
+								"bh_c_define_open",
+								"bh_c_define_close",
+								"bh_c_define_content",
+								"bh_curly",
+								"bh_curly_center",
+								"bh_curly_open",
+								"bh_curly_close",
+								"bh_curly_content",
+								"bh_default",
+								"bh_default_center",
+								"bh_default_open",
+								"bh_default_close",
+								"bh_default_content",
+								"bh_double_quote",
+								"bh_double_quote_center",
+								"bh_double_quote_open",
+								"bh_double_quote_close",
+								"bh_double_quote_content",
+								"bh_regex",
+								"bh_regex_center",
+								"bh_regex_open",
+								"bh_regex_close",
+								"bh_regex_content",
+								"bh_round",
+								"bh_round_center",
+								"bh_round_open",
+								"bh_round_close",
+								"bh_round_content",
+								"bh_single_quote",
+								"bh_single_quote_center",
+								"bh_single_quote_open",
+								"bh_single_quote_close",
+								"bh_single_quote_content",
+								"bh_square",
+								"bh_square_center",
+								"bh_square_open",
+								"bh_square_close",
+								"bh_square_content",
+								"bh_tag",
+								"bh_tag_center",
+								"bh_tag_open",
+								"bh_tag_close",
+								"bh_tag_content",
+								"bh_unmatched",
+								"bh_unmatched_center",
+								"bh_unmatched_open",
+								"bh_unmatched_close",
+								"bh_unmatched_content"
+							],
+							"syntax": "Packages/Python/Python.sublime-syntax",
+							"tab_size": 4,
+							"translate_tabs_to_spaces": true
+						},
+						"translation.x": 0.0,
+						"translation.y": 0.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 0,
+					"stack_multiselect": false,
+					"type": "text"
+				}
+			]
+		}
+	],
+	"incremental_find":
+	{
+		"height": 36.0
+	},
+	"input":
+	{
+		"height": 245.333333333
+	},
+	"layout":
+	{
+		"cells":
+		[
+			[
+				0,
+				0,
+				1,
+				1
+			]
+		],
+		"cols":
+		[
+			0.0,
+			1.0
+		],
+		"rows":
+		[
+			0.0,
+			1.0
+		]
+	},
+	"menu_visible": true,
+	"output.Julia":
+	{
+		"height": 665.0
+	},
+	"output.SublimeLinter":
+	{
+		"height": 0.0
+	},
+	"output.SublimeLinter Messages":
+	{
+		"height": 134.0
+	},
+	"output.Terminus":
+	{
+		"height": 150.0
+	},
+	"output.Terminus 2":
+	{
+		"height": 637.0
+	},
+	"output.Terminus 3":
+	{
+		"height": 128.0
+	},
+	"output.diagnostics":
+	{
+		"height": 380.0
+	},
+	"output.exec":
+	{
+		"height": 383.0
+	},
+	"output.find_results":
+	{
+		"height": 0.0
+	},
+	"output.languagetool":
+	{
+		"height": 266.0
+	},
+	"output.markdown":
+	{
+		"height": 122.0
+	},
+	"output.mde":
+	{
+		"height": 519.0
+	},
+	"output.mdpopups":
+	{
+		"height": 0.0
+	},
+	"output.package_dev":
+	{
+		"height": 126.0
+	},
+	"output.unsaved_changes":
+	{
+		"height": 156.0
+	},
+	"pinned_build_system": "",
+	"project": "fxRiskAnalysis.sublime-project",
+	"replace":
+	{
+		"height": 68.0
+	},
+	"save_all_on_build": true,
+	"select_file":
+	{
+		"height": 0.0,
+		"last_filter": "",
+		"selected_items":
+		[
+			[
+				"read",
+				"README.md"
+			],
+			[
+				"reui",
+				"requirements.txt"
+			],
+			[
+				"meet",
+				"UNDPnotes\\Meetings2025.md"
+			],
+			[
+				"luiss",
+				"UNDPnotes\\resources\\LUISSfinancingTheEnergyTransition.md"
+			],
+			[
+				"rome process",
+				"UNDPnotes\\docs memos etc\\Rome Process Advanced Pipeline Evaluation.md"
+			],
+			[
+				"mpho",
+				"UNDPnotes\\people\\mphoMataboge.md"
+			],
+			[
+				"todo",
+				"notes\\todo.md"
+			],
+			[
+				"mou",
+				"UNDPnotes\\resources\\MASEmouList.md"
+			],
+			[
+				"coutry",
+				"notes\\resources\\Country Engagement Report - Template.md"
+			],
+			[
+				"sireabdo",
+				"UNDPnotes\\emails\\Email_2025-09-16_0058 @Sire Abdoul Diallo - One-Pager on Investment Roundtable in DC.md"
+			],
+			[
+				"schroth",
+				"UNDPnotes\\emails\\Email_2025-09-15_2304 @SCHROTH, DANIEL - RE Rome Process – Co-ChairsAfDB Meeting (September 9).md"
+			],
+			[
+				"meetin",
+				"UNDPnotes\\Meetings2025.md"
+			],
+			[
+				"",
+				"UNDPnotes\\docs memos etc\\Kengen Sustainable Energy Conference Naivasha.md"
+			],
+			[
+				"naivash",
+				"UNDPnotes\\docs memos etc\\Kengen Sustainable Energy Conference Naivasha.md"
+			],
+			[
+				"sulea",
+				"UNDPnotes\\emails\\Email_2025-09-16_1121 @Sulea Murambi - RE KenGen conference participation.md"
+			],
+			[
+				"programm",
+				"UNDPnotes\\emails\\attachments\\Roundtable Programme-v4.docx"
+			],
+			[
+				"m3",
+				"UNDPnotes\\institutions\\Mission 300.md"
+			],
+			[
+				"coomasolar",
+				"UNDPnotes\\emails\\Email_2025-09-12_1422 @Mpho Mataboge - Follow up on yesterday's call Cooma Solar Power Partnership.md"
+			],
+			[
+				"jeromg20",
+				"UNDPnotes\\emails\\Email_2025-09-08_1438 @Sunday Jerome Salami - Re E4G G7-G20 Energy.md"
+			],
+			[
+				"torte",
+				"UNDPnotes\\resources\\ToRTemplate.md"
+			],
+			[
+				"tormau",
+				"UNDPnotes\\resources\\HR_ToRs_etc\\ToRMauritaniaFR.md"
+			],
+			[
+				"tor",
+				"UNDPnotes\\docs memos etc\\ToRforFinanceAndResources.md"
+			],
+			[
+				"jerom",
+				"UNDPnotes\\people\\sundayJeromeSalami.md"
+			],
+			[
+				"giaco",
+				"UNDPnotes\\people\\giacomoGallina.md"
+			],
+			[
+				"danie",
+				"UNDPnotes\\people\\danieleGuidi.md"
+			],
+			[
+				"zach",
+				"UNDPnotes\\countries\\zachariaMunga.md"
+			],
+			[
+				"kigh",
+				"UNDPnotes\\people\\kigha.md"
+			],
+			[
+				"mph",
+				"UNDPnotes\\people\\mphoMataboge.md"
+			],
+			[
+				"kigha",
+				"UNDPnotes\\people\\kigha.md"
+			],
+			[
+				"energ",
+				"UNDPnotes\\institutions\\energy4growth.md"
+			],
+			[
+				"franc",
+				"notes\\francis.md"
+			],
+			[
+				"gcpa",
+				"UNDPnotes\\institutions\\Global Clean Power Alliance.md"
+			],
+			[
+				"jerome",
+				"UNDPnotes\\emails\\Email_2025-09-08_1438 @Sunday Jerome Salami - Re E4G G7-G20 Energy.md"
+			],
+			[
+				"foll",
+				"UNDPnotes\\people\\followUps.md"
+			],
+			[
+				"kengen",
+				"UNDPnotes\\emails\\Email_2025-09-09_1523 @Sulea Murambi - RE KenGen conference participation.md"
+			],
+			[
+				"rohi",
+				"UNDPnotes\\people\\rohith.md"
+			],
+			[
+				"emailamex",
+				"UNDPnotes\\emails\\Email_2025-09-03_1831 @us.undp.travel@amexgbt.com - Transient and Preferred fare DENNIGFRANCIS - 15SEP-20SEPR....md"
+			],
+			[
+				"emaildgmo",
+				"UNDPnotes\\emails\\Email_2025-09-02_1328 @DGMO, Ufficio 3 - Rome Process – Co-ChairsAfDB Meeting (September 9).md"
+			],
+			[
+				"green",
+				"UNDPnotes\\institutions\\Africa GreenCo.md"
+			],
+			[
+				"afrge",
+				"UNDPnotes\\institutions\\Africa GreenCo.md"
+			],
+			[
+				"afric",
+				"UNDPnotes\\docs memos etc\\africaEnergyForum2025.md"
+			],
+			[
+				"energy",
+				"UNDPnotes\\docs memos etc\\Energy for Growth Workplan.md"
+			],
+			[
+				"energy ",
+				"UNDPnotes\\institutions\\energy4growth.md"
+			],
+			[
+				"finance",
+				"UNDPnotes\\resources\\Finance notes.md"
+			],
+			[
+				"tod",
+				"notes\\todo.md"
+			],
+			[
+				"maxi",
+				"notes\\personal notes\\Maxi.md"
+			],
+			[
+				"emailmph",
+				"UNDPnotes\\emails\\Email_2025-08-27_1646 @Mpho Mataboge - Kenya.md"
+			],
+			[
+				"email",
+				"UNDPnotes\\emails\\Email_2025-08-27_1741 @Stefano Pistolese - Re Meeting on Mission Innovation Initiative.md"
+			],
+			[
+				"email crist",
+				"UNDPnotes\\emails\\Email_2025-08-27_1001 @@Cristina Altomare - Gender specialist at the Rome Centre.md"
+			],
+			[
+				"shannon",
+				"UNDPnotes\\emails\\Email_2025-08-26_1554 @@Shannon WANG - RE UNDP Rome Centre Invitation to Climate Finance Event –....md"
+			],
+			[
+				"mee",
+				"UNDPnotes\\Meetings2025.md"
+			],
+			[
+				"yml",
+				"cheatsheets\\glosarioEconomico.yaml"
+			],
+			[
+				"docusign",
+				"UNDPnotes\\emails\\Email_2025-08-26 1753 Complete with Docusign IC Time sheet_July.docx, COP- july- PANSINI.docx, Monthly Progress Repo....md"
+			],
+			[
+				"email call",
+				"UNDPnotes\\emails\\Email_2025-08-26 1817 Call for Applications – 2025 Assessment Centre for the Resident Representative (RR) and Deputy Resident Representative (DRR) Talent Pool    .md"
+			],
+			[
+				"sesaspect",
+				"UNDPnotes\\emails\\Email_2025-08-26 2003 Re SES aspects of Akiira Geothermal Project -Kenya .md"
+			],
+			[
+				"goals",
+				"UNDPnotes\\docs memos etc\\performanceManagement\\mphoGoals2025.md"
+			],
+			[
+				"codi",
+				"notes\\personal notes\\Codice Fiscale.md"
+			],
+			[
+				"rome",
+				"UNDPnotes\\docs memos etc\\romeProcess.md"
+			],
+			[
+				"fol",
+				"UNDPnotes\\people\\followUps.md"
+			],
+			[
+				"rome pro",
+				"UNDPnotes\\docs memos etc\\romeProcess.md"
+			],
+			[
+				"jose",
+				"UNDPnotes\\people\\josephNjuguna.md"
+			],
+			[
+				"fool",
+				"UNDPnotes\\people\\followUps.md"
+			],
+			[
+				"fo",
+				"UNDPnotes\\people\\followUps.md"
+			],
+			[
+				"foo",
+				"UNDPnotes\\people\\followUps.md"
+			],
+			[
+				"fina",
+				"UNDPnotes\\resources\\Finance notes.md"
+			],
+			[
+				"conve",
+				"cheatsheets\\conversions.md"
+			],
+			[
+				"follo",
+				"UNDPnotes\\people\\followUps.md"
+			],
+			[
+				"gia",
+				"UNDPnotes\\people\\giacomoGallina.md"
+			],
+			[
+				"rai",
+				"UNDPnotes\\docs memos etc\\RAI Podcast.md"
+			],
+			[
+				"tdod",
+				"UNDPnotes\\docs memos etc\\Email to DRRs on E4G.md"
+			],
+			[
+				"ago",
+				"UNDPnotes\\people\\ago.md"
+			],
+			[
+				"meeting",
+				"UNDPnotes\\Meetings2024.md"
+			],
+			[
+				"africa ene",
+				"UNDPnotes\\docs memos etc\\africaEnergyForum2025.md"
+			],
+			[
+				"africa",
+				"UNDPnotes\\docs memos etc\\africaEnergyForum2025.md"
+			],
+			[
+				"kig",
+				"UNDPnotes\\people\\kigha.md"
+			],
+			[
+				"kenya",
+				"UNDPnotes\\countries\\kenya.md"
+			],
+			[
+				"moz",
+				"modelSpecificNotes\\MOZmodelNotes\\MOZnotes.md"
+			],
+			[
+				"proejcts",
+				"UNDPnotes\\resources\\activeProjects.md"
+			],
+			[
+				"ener",
+				"UNDPnotes\\activities\\Energy All Hands.md"
+			],
+			[
+				"zam",
+				"UNDPnotes\\countries\\zambia.md"
+			],
+			[
+				"zamb",
+				"zambia national plan for clean cooking. consultant"
+			],
+			[
+				"cris",
+				"UNDPnotes\\people\\cristina.md"
+			],
+			[
+				"mission",
+				"UNDPnotes\\institutions\\Mission 300.md"
+			],
+			[
+				"rome pr",
+				"UNDPnotes\\docs memos etc\\romeProcess.md"
+			],
+			[
+				"anna",
+				"UNDPnotes\\annalidiaPansini.md"
+			],
+			[
+				"tod\\",
+				"UNDPnotes\\resources\\to be converted\\20250401 Energy For Growth Meeting Notes.docx"
+			],
+			[
+				"job",
+				"notes\\UNDPnotes\\jobApplication.md"
+			],
+			[
+				"temp",
+				"UNDPnotes\\resources\\tempMeetings.md"
+			],
+			[
+				"sanni",
+				"UNDPnotes\\DGsannino.md"
+			],
+			[
+				"tood",
+				"notes\\todo.md"
+			],
+			[
+				"vigl",
+				"UNDPnotes\\docs memos etc\\EIB letter to Vigliotti.md"
+			],
+			[
+				"meeti",
+				"UNDPnotes\\Meetings2024.md"
+			],
+			[
+				"mouli",
+				"UNDPnotes\\resources\\MASEmouList.md"
+			],
+			[
+				"plain",
+				"UNDPnotes\\resources\\outputplain.md"
+			],
+			[
+				"outpu",
+				"UNDPnotes\\resources\\outputplain.md"
+			],
+			[
+				"cleanpo",
+				"UNDPnotes\\institutions\\Global Clean Power Alliance.md"
+			],
+			[
+				"globl",
+				"UNDPnotes\\institutions\\Global Clean Power Alliance.md"
+			],
+			[
+				"andrea",
+				"UNDPnotes\\people\\andreaRenzulli.md"
+			],
+			[
+				"acces",
+				"C:\\Users\\francis.dennig\\OneDrive - United Nations Development Programme\\UNDPnotes\\resources\\access2contribute.png"
+			],
+			[
+				"ene",
+				"UNDPnotes\\energy4growth.md"
+			],
+			[
+				"acc",
+				"C:\\Users\\francis.dennig\\OneDrive - United Nations Development Programme\\UNDPnotes\\resources\\access2contribute.png"
+			],
+			[
+				"all",
+				"UNDPnotes\\activities\\Energy All Hands.md"
+			],
+			[
+				"simona",
+				"UNDPnotes\\people\\simona ruggieri.md"
+			],
+			[
+				"party",
+				"notes\\personal notes\\sommerParty2023.md"
+			],
+			[
+				"workpa",
+				"UNDPnotes\\docs memos etc\\Energy for Growth Workplan.md"
+			],
+			[
+				"jan24",
+				"UNDPnotes\\docs memos etc\\weeklyReports\\jan24.md"
+			],
+			[
+				"proj",
+				"notes\\resources\\ProjectFiche.md"
+			],
+			[
+				"jos",
+				"UNDPnotes\\people\\josephNjuguna.md"
+			],
+			[
+				"duccio",
+				"UNDPnotes\\people\\duccio.md"
+			],
+			[
+				"work",
+				"UNDPnotes\\docs memos etc\\Energy for Growth Workplan.md"
+			],
+			[
+				"workplan",
+				"UNDPnotes\\docs memos etc\\Energy for Growth Workplan.md"
+			],
+			[
+				"pac",
+				"notes\\resources\\pactForTheFuture.md"
+			],
+			[
+				"me",
+				"UNDPnotes\\Meetings2024.md"
+			],
+			[
+				"duc",
+				"UNDPnotes\\people\\duccio.md"
+			],
+			[
+				"mp",
+				"UNDPnotes\\people\\mphoMataboge.md"
+			],
+			[
+				"eib",
+				"UNDPnotes\\docs memos etc\\EIB-UNDP Action Plan 2024-2025.md"
+			],
+			[
+				"no",
+				"UNDPnotes\\docs memos etc\\weeklyReports\\nov29.md"
+			],
+			[
+				"templ",
+				"UNDPnotes\\resources\\countryUpdateTemplate.md"
+			],
+			[
+				"simi",
+				"UNDPnotes\\people\\simona ruggieri.md"
+			],
+			[
+				"memo",
+				"UNDPnotes\\docs memos etc\\mails and memos.md"
+			],
+			[
+				"mfmod",
+				"cheatsheets\\MFMOD.md"
+			],
+			[
+				"vizi",
+				"notes\\vizi\\viziNotes.md"
+			],
+			[
+				"ducc",
+				"UNDPnotes\\people\\duccio.md"
+			],
+			[
+				"zac",
+				"UNDPnotes\\countries\\zachariaMunga.md"
+			],
+			[
+				"du",
+				"UNDPnotes\\people\\duccio.md"
+			],
+			[
+				"diren",
+				"UNDPnotes\\people\\alessandraDiRenzo.md"
+			],
+			[
+				"ruggi",
+				"UNDPnotes\\people\\simona ruggieri.md"
+			],
+			[
+				"fran",
+				"notes\\francis.md"
+			]
+		],
+		"width": 0.0
+	},
+	"select_project":
+	{
+		"height": 503.333333333,
+		"last_filter": "",
+		"selected_items":
+		[
+			[
+				"",
+				"C:\\Users\\francis.dennig\\OneDrive\\notes\\notesANDcheatsheets.sublime-project"
+			],
+			[
+				"mfm",
+				"C:\\WBG\\LocalITUtilities\\code\\mfmodVizi\\mfmodVizi.sublime-project"
+			],
+			[
+				"ftt",
+				"C:\\WBG\\LocalITUtilities\\code\\FTTpython.sublime-project"
+			],
+			[
+				"sen",
+				"C:\\Users\\wb561867\\OneDrive - WBG\\Documents\\_CCDR Models\\SEN\\SENmod.sublime-project"
+			],
+			[
+				"vi",
+				"C:\\WBG\\LocalITUtilities\\code\\mfmodVizi\\mfmodVizi.sublime-project"
+			],
+			[
+				"dom",
+				"C:\\Users\\wb561867\\OneDrive - WBG\\Documents\\_otherModels\\DOM\\DOMmodel.sublime-project"
+			],
+			[
+				"pry",
+				"C:\\Users\\WB561867\\OneDrive - WBG\\Documents\\_CCDR Models\\PRY\\PRYmod.sublime-project"
+			],
+			[
+				"ken",
+				"C:\\Users\\WB561867\\OneDrive - WBG\\Documents\\_CCDR Models\\KEN\\KENmod.sublime-project"
+			],
+			[
+				"dave",
+				"C:\\Users\\WB561867\\OneDrive - WBG\\Documents\\_CCDR Models\\PRY\\PRYdave\\PRYdave.sublime-project"
+			],
+			[
+				"dav",
+				"C:\\Users\\WB561867\\OneDrive - WBG\\Documents\\_CCDR Models\\PRY\\PRYdave\\PRYdave.sublime-workspace"
+			],
+			[
+				"cheat",
+				"C:\\Users\\WB561867\\WBG\\Dennig, Francis - WB\\cheatsheets\\cheatsheets.sublime-project"
+			],
+			[
+				"per",
+				"C:\\Users\\WB561867\\OneDrive - WBG\\Documents\\_CCDR Models\\PER\\PERmfmod.sublime-project"
+			],
+			[
+				"moz",
+				"C:\\Users\\WB561867\\OneDrive - WBG\\Documents\\_CCDR Models\\MOZ\\MOZmfmod.sublime-project"
+			],
+			[
+				"hnd",
+				"C:\\Users\\WB561867\\OneDrive - WBG\\Documents\\_CCDR Models\\HND\\HNDmfmod.sublime-project"
+			],
+			[
+				"ago",
+				"C:\\Users\\WB561867\\OneDrive - WBG\\Documents\\_CCDR Models\\AGO\\AGOmfmod.sublime-project"
+			],
+			[
+				"mar",
+				"C:\\Users\\WB561867\\OneDrive - WBG\\Documents\\_CCDR Models\\MAR\\MARmfmod.sublime-project"
+			],
+			[
+				"ho",
+				"C:\\Users\\WB561867\\OneDrive - WBG\\Documents\\_CCDR Models\\HND\\HNDmfmod.sublime-project"
+			],
+			[
+				"mti",
+				"C:\\Users\\WB561867\\WBG\\Dennig, Francis - WB\\MTI Bootcamp climate class\\MTIbootcamp.sublime-project"
+			],
+			[
+				"che",
+				"C:\\Users\\WB561867\\WBG\\Dennig, Francis - WB\\cheatsheets\\cheatsheets.sublime-project"
+			]
+		],
+		"width": 380.0
+	},
+	"select_symbol":
+	{
+		"height": 206.0,
+		"last_filter": "rpff",
+		"selected_items":
+		[
+			[
+				"rpff",
+				"# RPFF information gathering"
+			],
+			[
+				"codi",
+				"# Codice Fiscale"
+			],
+			[
+				"torep",
+				"toreply"
+			],
+			[
+				"tore",
+				"toreply"
+			],
+			[
+				"nar",
+				"[[@Nargis Sharshekeeva]]"
+			],
+			[
+				"@nargi",
+				"[[@Nargis Sharshekeeva]]"
+			],
+			[
+				"@nargis",
+				"[[@Nargis SHARSHEKEEVA]]"
+			],
+			[
+				"dgmo",
+				"[[DGMO, Ufficio 3]]"
+			],
+			[
+				"sulea",
+				"[[@Sulea Murambi]]"
+			],
+			[
+				"amex",
+				"[[us.undp.travel@amexgbt.com]]"
+			],
+			[
+				"carmel",
+				"[[@COCUZZA Carmelo]]"
+			],
+			[
+				"jerom",
+				"## people: [[jerome]]"
+			],
+			[
+				"tcx",
+				"# TCX"
+			],
+			[
+				"@sul",
+				"[[@Sulea Murambi]]"
+			],
+			[
+				"tor",
+				"# ToR Template"
+			],
+			[
+				"@ducc",
+				"[[@Duccio Tenti]]"
+			],
+			[
+				"@aar",
+				"[[@Aaron Cunningham]]"
+			],
+			[
+				"@kig",
+				"[[@Kigha Benyoh]]"
+			],
+			[
+				"@sule",
+				"[[@Sulea Murambi]]"
+			],
+			[
+				"@jose",
+				"[[@Joseph Njuguna]]"
+			],
+			[
+				"franc",
+				"# francis"
+			],
+			[
+				"@andrea",
+				"[[@Andreas Koall]]"
+			],
+			[
+				"@gulgu",
+				"[[@Gulgun Sahin]]"
+			],
+			[
+				"gcpa",
+				"# Global Clean Power Alliance"
+			],
+			[
+				"@gamba",
+				"[[@Gambacorta Lorenza]]"
+			],
+			[
+				"@pela",
+				"[[@Pela Alberto]]"
+			],
+			[
+				"financ",
+				"# Finance notes"
+			],
+			[
+				"naghan",
+				"[[@Nagehan Celebi]]"
+			],
+			[
+				"sandy",
+				"[[@Sandy Daoud]]"
+			],
+			[
+				"@sand",
+				"[[@Sandy Daoud]]"
+			],
+			[
+				"@nage",
+				"[[@Nagehan Celebi]]"
+			],
+			[
+				"mana",
+				"# manafTouati"
+			],
+			[
+				"torepl",
+				"toreply"
+			],
+			[
+				"@claud",
+				"[[@Claudia Muench]]"
+			],
+			[
+				"@bruc",
+				"[[@Bruce Jenkins]]"
+			],
+			[
+				"@dni",
+				"[[@Daniele Guidi]]"
+			],
+			[
+				"aar",
+				"[[@Aaron Cunningham]]"
+			],
+			[
+				"schrot",
+				"[[SCHROTH, DANIEL]]"
+			],
+			[
+				"sulei",
+				"[[@Sulea Murambi]]"
+			],
+			[
+				"zacha",
+				"[[@Zacharia Munga]]"
+			],
+			[
+				"cristin",
+				"[[@Cristina Altomare]]"
+			],
+			[
+				"bruce",
+				"[[@Bruce Jenkins]]"
+			],
+			[
+				"",
+				"# EC"
+			],
+			[
+				"@clau",
+				"[[@Claudia Muench]]"
+			],
+			[
+				"toreply",
+				"toreply"
+			],
+			[
+				"school cooking",
+				"# Clean cooking in school settings"
+			],
+			[
+				"cludia",
+				"[[@Claudia Muench]]"
+			],
+			[
+				"@",
+				"[[@Andrea Renzulli]]"
+			],
+			[
+				"shoni",
+				"[[SHONIBARE, WALE]]"
+			],
+			[
+				"@an",
+				"[[@Andrea Renzulli]]"
+			],
+			[
+				"te",
+				"# carlota cenalmor and massimo"
+			],
+			[
+				"cod",
+				"# Codice Fiscale"
+			],
+			[
+				"codei",
+				"# Codice Fiscale"
+			],
+			[
+				"codic",
+				"# Codice Fiscale"
+			],
+			[
+				"fisca",
+				"# Codice Fiscale"
+			],
+			[
+				"coa",
+				"## CoA"
+			],
+			[
+				"cong",
+				"# Congo Brazza"
+			],
+			[
+				"congo",
+				"# Congo Brazza"
+			],
+			[
+				"cover",
+				"# Cover letter"
+			],
+			[
+				"codice",
+				"# Codice Fiscale"
+			],
+			[
+				"cdp g",
+				"# CDP sovereign team"
+			],
+			[
+				"coo",
+				"## Coordinating priorities"
+			],
+			[
+				"energy for gro",
+				"# Energy for Growth Concept note"
+			],
+			[
+				"energy ",
+				"# energy for growth"
+			],
+			[
+				"commi",
+				"# Commision meeting on Energy for Growth"
+			],
+			[
+				"euro",
+				"## European Investment Bank -- Global Gateway Fund -- GLGF"
+			],
+			[
+				"wordbank",
+				"# World Bank Group Private Sector Investment Lab"
+			],
+			[
+				"yard",
+				"# 7Yards counterparty"
+			],
+			[
+				"und",
+				"## unimplemented desiderata"
+			],
+			[
+				"ffg",
+				"# implement bankwards for aviation first strategy"
+			],
+			[
+				"rege",
+				"# Regex"
+			],
+			[
+				"FTT",
+				"## calling FTT functionality within modelflow"
+			],
+			[
+				"ftt",
+				"## simple FTT paper"
+			],
+			[
+				"pitch",
+				"# pitchdeck related"
+			],
+			[
+				"banwk",
+				"# todo bankwards"
+			],
+			[
+				"todo",
+				"# todo bankwards"
+			],
+			[
+				"todo ",
+				"# todo DOM"
+			],
+			[
+				"charge",
+				"### charge code"
+			],
+			[
+				"ccdr",
+				"## KEN CCDR"
+			],
+			[
+				"char",
+				"### charge code"
+			],
+			[
+				"silen",
+				"### silen"
+			],
+			[
+				"charg",
+				"### charge code"
+			],
+			[
+				"cha",
+				"# charge codes"
+			],
+			[
+				"hondu",
+				"#### Honduras"
+			],
+			[
+				"hond",
+				"#### Honduras"
+			],
+			[
+				"file",
+				"#### Filesystem"
+			],
+			[
+				"buil",
+				"#### Building the frontend\n"
+			],
+			[
+				"build",
+				"#### Building the frontend"
+			],
+			[
+				"buildi",
+				"#### Building the frontend\n"
+			],
+			[
+				"mnem",
+				"#### Mnemonics"
+			],
+			[
+				"GDPNPOTLKN",
+				"AGONYGDPNPOTLKN"
+			],
+			[
+				"gdppotkn",
+				"AGONYGDPPOTLKN"
+			],
+			[
+				"mne",
+				"#### Mnemonics"
+			],
+			[
+				"tak",
+				"### Tasks"
+			],
+			[
+				"clim",
+				"##### Climate/energy"
+			],
+			[
+				"men",
+				"#### Mnemonics"
+			]
+		],
+		"width": 960.0
+	},
+	"selected_group": 0,
+	"settings":
+	{
+	},
+	"show_minimap": true,
+	"show_open_files": true,
+	"show_tabs": true,
+	"side_bar_visible": false,
+	"side_bar_width": 374.0,
+	"status_bar_visible": true,
+	"template_settings":
+	{
+	}
+}

@@ -1,19 +1,25 @@
-# Computing Currency Devaluation Events
+# FX Risk Research
 
-Using World Bank annual data for LCU:USD *X_i* exchange rates and local consumption price indices *P_i*, I am calculating devalation events in *R_i=X_i/P_i*
+This repository contains the computations and code for the FX risk policy paper.
 
-## Open issues
+## Structure
+- `fxrisk.py`: Core functions
+- `notebooks/analysis.ipynb`: Jupyter notebook with explanations + computations
+- `data/`: Input datasets
+- `requirements.txt`: Python dependencies
 
-- initial and terminal point problems
-    - in Cameroon, Cape Verde, ethiopia, gambia, guinea, mauritania, morocco, mozambique, namibia, nigeria, rwanda, ZAF
-- internal non-intersection of baseline *B_i* with *R_i* 
-    - Eswatini, Botswana, Burkina Faso, ghana, malawi, namibia, ZAF
-- overlapping events in 
-    - egypt, eritrea, lesotho
-- event not being picked up 
-    - somalia
-- wrong initial date
-    - zambia
-- something is wrong in chad
-    - i am only looking at the next peak after the ma trough. i might have to look at all peaks or at the higher peak
+## Getting Started
+```bash
+# create and activate virtual env (recommended)
+python -m venv .venv
+source .venv/bin/activate   # on mac/linux
+.venv\Scripts\activate      # on windows
+
+# install deps
+pip install -r requirements.txt
+
+# start notebook
+jupyter notebook notebooks/consolidated_currency_analysis.ipynb
+```
+
 
