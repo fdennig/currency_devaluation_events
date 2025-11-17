@@ -3,8 +3,8 @@
 This repository contains the computations and code for the FX risk policy paper.
 
 ## Structure
-- `fxrisk.py`: Core functions
-- `notebooks/analysis.ipynb`: Jupyter notebook with explanations + computations
+- `notebooks/consolidated_currency_analysis.ipynb`: Main Jupyter notebook with explanations + computations
+- `source/data_analysis_functions.py`: Core functions, loaded into notebook
 - `data/`: Input datasets
 - `requirements.txt`: Python dependencies
 
