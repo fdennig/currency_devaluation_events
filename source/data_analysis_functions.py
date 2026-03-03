@@ -16,12 +16,31 @@ file_path = '../data/priceIndex_and_exchangeRate_series_2025_SP.csv'  # Replace 
 data = pd.read_csv(file_path, index_col=0)
 
 african_countries = [
-    'DZA', 'AGO', 'BEN', 'BWA', 'BFA', 'BDI', 'CMR', 'CPV', 'CAF', 'TCD', 'COM', 'COG', 'CIV', 
-    'COD', 'DJI', 'EGY', 'GNQ', 'ERI', 'SWZ', 'ETH', 'GAB', 'GMB', 'GHA', 'GIN', 'GNB', 'KEN', 
-    'LBY', 'LSO', 'LBR', 'MDG', 'MWI', 'MLI', 'MRT', 'MUS', 'MAR', 'MOZ', 'NAM', 'NER', 'NGA', 
-    'RWA', 'STP', 'SEN', 'SYC', 'SLE', 'SOM', 'ZAF', 'SSD', 'SDN', 'TZA', 'TGO', 'TUN', 'UGA', 
+    'DZA', 'AGO', 'BEN', 'BWA', 'BFA', 'BDI', 'CMR', 'CPV', 'CAF', 'TCD', 'COM', 'COG', 'CIV',
+    'COD', 'DJI', 'EGY', 'GNQ', 'ERI', 'SWZ', 'ETH', 'GAB', 'GMB', 'GHA', 'GIN', 'GNB', 'KEN',
+    'LBY', 'LSO', 'LBR', 'MDG', 'MWI', 'MLI', 'MRT', 'MUS', 'MAR', 'MOZ', 'NAM', 'NER', 'NGA',
+    'RWA', 'STP', 'SEN', 'SYC', 'SLE', 'SOM', 'ZAF', 'SSD', 'SDN', 'TZA', 'TGO', 'TUN', 'UGA',
     'ZMB', 'ZWE'
 ]
+
+# Exchange rate regime classification (based on IMF AREAER, predominant arrangement 2000-2023)
+# Three groups:
+#   "EUR-linked"  — CFA franc zone (WAEMU+CEMAC) plus Comoros and Cape Verde, all pegged to EUR
+#   "ZAR-linked"  — Common Monetary Area members pegged 1:1 to South African rand
+#   "Flexible"    — managed floats, crawling pegs, and market-determined rates
+fx_regime = {
+    # CFA Franc Zone — WAEMU (pegged to EUR via French Treasury)
+    'BEN': 'EUR-linked', 'BFA': 'EUR-linked', 'CIV': 'EUR-linked', 'GNB': 'EUR-linked',
+    'MLI': 'EUR-linked', 'NER': 'EUR-linked', 'SEN': 'EUR-linked', 'TGO': 'EUR-linked',
+    # CFA Franc Zone — CEMAC (pegged to EUR via French Treasury)
+    'CMR': 'EUR-linked', 'CAF': 'EUR-linked', 'TCD': 'EUR-linked', 'COG': 'EUR-linked',
+    'GNQ': 'EUR-linked', 'GAB': 'EUR-linked',
+    # Other EUR-pegged (separate monetary authorities, same anchor)
+    'COM': 'EUR-linked', 'CPV': 'EUR-linked',
+    # Common Monetary Area — pegged 1:1 to ZAR
+    'LSO': 'ZAR-linked', 'NAM': 'ZAR-linked', 'SWZ': 'ZAR-linked',
+    # All others default to 'Flexible' — see classify_regime()
+}
 
 def build_hybrid_index_and_ma_df(
     start="1990-01-01",
@@ -444,6 +463,125 @@ def annuity_factor(n_years=15, r=0.05):
     if r == 0:
         return n_years
     return (1 - (1 + r) ** (-n_years)) / r
+
+def build_decomposition_df(
+    start="2000-01-01",
+    end="2023-12-31",
+    ma_window=5,
+    countries=african_countries,
+    df=data
+):
+    """
+    Build nominal, real, and PPP-expected FX indices for decomposition analysis.
+
+    Decomposes the nominal exchange rate movement into:
+    - The PPP-expected (forward-implied) depreciation path, driven by inflation differentials
+    - The real exchange rate index (the residual, which is what matters for inflation-adjusted revenues)
+
+    Under covered interest parity with equal real rates, the forward rate prices in
+    depreciation equal to the inflation differential. The PPP-expected path is thus:
+        ppp_expected(t) = 100 × [CPI_US(t)/CPI_US(t0)] / [CPI_local(t)/CPI_local(t0)]
+
+    Key identity: real_fx_index(t) = nominal_fx_index(t) × CPI_local(t)/CPI_local(t0)
+
+    Parameters
+    ----------
+    start : str, default "2000-01-01"
+        Start date for the analysis period.
+    end : str, default "2023-12-31"
+        End date for the analysis period.
+    ma_window : int, default 5
+        Window size in years for the moving average baseline.
+    countries : list, default african_countries
+        List of 3-letter ISO country codes to process.
+    df : pd.DataFrame, default data
+        Input DataFrame with exchange rate and price data.
+
+    Returns
+    -------
+    pd.DataFrame
+        Tidy DataFrame with columns:
+        - country, year
+        - nominal_fx_index: Nominal USD/LCU index, normalized to 100
+        - nominal_fx_baseline: 5-year MA of nominal index
+        - real_fx_index: Real exchange rate H=P/X, normalized to 100
+        - real_fx_baseline: 5-year MA of real index
+        - ppp_expected_path: Forward-implied nominal path under PPP
+    """
+    start_date = pd.to_datetime(start)
+    sd_minus_window = start_date - pd.DateOffset(years=ma_window - 1)
+    df.index = pd.to_datetime(df.index)
+    df = df[(df.index >= sd_minus_window) & (df.index <= end)]
+
+    us_cpi = df["USANECONPRVTXN"]
+    records = []
+
+    for country in countries:
+        panusatls_col = f"{country}PANUSATLS"
+        price_level_col = f"{country}NECONPRVTXN"
+
+        if panusatls_col not in df.columns or price_level_col not in df.columns:
+            print(f"Missing columns for {country}")
+            continue
+
+        local_cpi = df[price_level_col]
+        nominal_fx_raw = 1.0 / df[panusatls_col]       # USD per LCU
+        real_fx_raw = local_cpi / df[panusatls_col]     # H = P / X
+
+        # Find first valid point where all series are available
+        combined = pd.concat(
+            [nominal_fx_raw, real_fx_raw, local_cpi, us_cpi], axis=1
+        ).dropna()
+        if len(combined) == 0:
+            print(f"No valid data for {country}")
+            continue
+        first_valid = combined.index[0]
+
+        # Normalize all indices to 100 at first valid date
+        nominal_fx_norm = nominal_fx_raw / nominal_fx_raw.loc[first_valid] * 100
+        real_fx_norm = real_fx_raw / real_fx_raw.loc[first_valid] * 100
+
+        # PPP-expected path: where nominal rate would be under relative PPP
+        # Forward rates price in depreciation = inflation differential
+        ppp_expected = 100.0 * (
+            (us_cpi / us_cpi.loc[first_valid]) /
+            (local_cpi / local_cpi.loc[first_valid])
+        )
+
+        # Moving average baselines
+        nominal_fx_ma = nominal_fx_norm.rolling(
+            window=ma_window, min_periods=ma_window
+        ).mean()
+        real_fx_ma = real_fx_norm.rolling(
+            window=ma_window, min_periods=ma_window
+        ).mean()
+
+        for date, nom, nom_ma, real_v, real_ma, ppp in zip(
+            nominal_fx_norm.index,
+            nominal_fx_norm.values, nominal_fx_ma.values,
+            real_fx_norm.values, real_fx_ma.values,
+            ppp_expected.values,
+        ):
+            if date < start_date:
+                continue
+            if any(pd.isna(v) for v in [nom, nom_ma, real_v, real_ma, ppp]):
+                continue
+            records.append({
+                "country": country,
+                "year": date.year,
+                "nominal_fx_index": float(nom),
+                "nominal_fx_baseline": float(nom_ma),
+                "real_fx_index": float(real_v),
+                "real_fx_baseline": float(real_ma),
+                "ppp_expected_path": float(ppp),
+            })
+
+    return (
+        pd.DataFrame(records)
+        .sort_values(["country", "year"])
+        .reset_index(drop=True)
+    )
+
 
 def calculate_simple_risk_premium(df_events):
     """
