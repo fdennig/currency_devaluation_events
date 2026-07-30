@@ -1,0 +1,145 @@
+---
+title: "FX Risk Policy Memo"
+date: today
+format:
+  html:
+    self-contained: true
+execute:
+  echo: false
+jupyter: python3
+---
+
+## Notation
+
+For country $i$, with financial close normalised to $t=0$, maturity $T$, and tenor $n=T$:
+
+- $P_{i,t}$ — domestic price level (CPI), in LCU; $p\equiv\ln P$, inflation $\pi=\dot p$
+- $S_{i,t}$ — nominal exchange rate in LCU per USD, so $\dot s>0$ is a depreciation; $s\equiv\ln S$
+- $Q_{i,t}\equiv P_{i,t}/S_{i,t}$ — CPI-based **real exchange rate**, quoted as USD per local basket, so a rise is a real *appreciation*; $q\equiv\ln Q=p-s$ and $\dot q=\pi-\dot s$. (This is the reciprocal of the textbook $SP^{*}/P$ form; the project is long $Q$.)
+- $\tau,\ c,\ E$ — real tariff, real unit cost, constant energy output
+- $\rho$ — discount rate; $A_{\rho,n}\equiv\dfrac{1-(1+\rho)^{-n}}{\rho}$ — present value of a unit annuity
+- $D$ — debt stock; $\text{LLCR}$ — loan-life coverage ratio
+- $V$ — present value of project P&L; $L$ — Facility loss; $\mathbb{E}[\cdot]$ — expectation
+
+## Motivation
+
+Currency mismatch between local-currency electricity revenues and hard-currency debt service stalls many infrastructure transactions in developing countries. Where hard-currency credit funds generation assets, the currency risk has typically been pushed onto the national utility — the offtaker — through dollarised power purchase agreements (PPAs). Devaluations then transmit directly into the utility's balance sheet, raising offtaker risk and creating a second-order impediment to financing. Capital costs are thus inflated twice over: once by direct currency risk, and again by the induced offtaker risk.
+
+This proposal, analogous to the emergency-liquidity facility of the EcoInvest Brazil platform, splits that currency risk into two parts: an **inflation component**, shared between final consumers and the utility through indexed tariffs, and a **real component**, for which — as shown below — affordable cover can be structured.
+
+## Simple model
+
+The key indicator is the local price adjusted exchange rate $Q_{i,t}=P_{i,t}/S_{i,t}$, the dollar value of a fixed local basket, where $P_{i,t}$ is the domestic price level and $S_{i,t}$ the nominal exchange rate (LCU per USD). If the electricity tariff is indexed to domestic inflation, $Q_{i,t}$ also tracks the USD value of a MWh sold locally.
+
+In growth rates we can see that $Q$ grows as the difference between the inflation rate and the nominal devaluation rate:
+$$
+\dot{q}_{i,t} = \dot{p}_{i,t} - \dot{s}_{i,t} 
+$$
+
+A positive $\dot{s}_{i,t}$ (devaluation) means that the local currency equivalent of a dollar is increasing, and so the amount of dollar cashflows available to the project is decreasing. When the inflation rate is positive because the local currency cost of goods is increasing, that increases the availability of local currency from the sale of a set amount of goods, and thus also the availability of dollars to the project.
+
+Consider a project generating constant electricity $E$ from $t=0$ to $T$ at constant real unit cost $c$ (excluding debt service, which will be in hard currency), selling at an inflation-indexed real tariff $\tau$. Nominal local-currency revenue is $P_{i,t}\,\tau\,E$ and earnings before debt service are $P_{i,t}(\tau-c)E$. Cash flows available for debt service (CFADS in dollars) are therefore growing at the rate of inflation in LCU, and in dollars they are equal to
+
+$$
+\text{CF}^{\$}_{i,t} = Q_{i,t}\,(\tau-c)\,E .
+$$
+
+At financial close ($t=0$) the project has an outstanding USD debt stock of $D$, which it is repaying with a tenor $n=T$ at an interest rate $r$. Repayment takes place with a fixed annuity of $K = \frac{D}{A_{r,n}}$ dollars over $n$ years, where the annuity factor is defined as
+
+$$
+A_{r,n}=\frac{1-(1+r)^{-n}}{r}
+$$ 
+
+We will assume that in the first period dollar CFADS are exactly equal to debt service $\text{CF}^{\$}_{i,0} = K$. Under constant $Q_{i,t}$ that implies a debt service coverage ratio of one ($DSCR=1$) for the duration of the loan. 
+
+We focus on pure currency risk. $DSCR=1$ is a tighter assumption than real transactions so the costs derived below are an upper bound. Any $DSCR>1$ or back-loaded repayment profile only reduces the cost of the guarantee structure proposed.
+
+When $DSCR=1$ any decline in $Q$ produces a shortfall and any rise a surplus over debt service.
+
+The surplus (or shortfall when negative) in USD CFADS in period $t$ is
+$$
+CF^{\$}_{i,t} - K = (Q_{i,t} - Q_{i,0})(\tau-c)\,E = \frac{Q_{i,t} - Q_{i,0}}{Q_{i,0}}\cdot K
+$$
+
+When $Q_{i,t}$ is below $K=Q_{i,0}$ for a period, the borrower is short by 
+$$
+K \cdot \frac{Q_{i,t} - K}{K}
+$$
+The **cumulative (holding-period) return on $Q$ since close**,
+
+$$
+R_{i,t} \;\equiv\; \frac{\text{CF}^{\$}_{i,t}}{\text{CF}^{\$}_{i,0}} - 1 \;=\; \frac{Q_{i,t}}{Q_{i,0}} - 1 ,
+$$
+
+a cumulative return, not a per-period flow. Here the growth-rate decomposition does the explanatory work. Because $Q=P/S$, taking logs and differentiating gives the instantaneous identity
+
+$$
+\dot q_{i,t} \;=\; \pi_{i,t} - \dot s_{i,t} ,
+$$
+
+the rate of **real appreciation**: inflation net of nominal depreciation. Integrating from close,
+
+$$
+\ln\!\big(1+R_{i,t}\big) \;=\; q_{i,t}-q_{i,0} \;=\; \int_{0}^{t}\big(\pi_{i,u}-\dot s_{i,u}\big)\,du,
+\qquad\text{so}\qquad
+R_{i,t}\approx\int_{0}^{t}\big(\pi_{i,u}-\dot s_{i,u}\big)\,du .
+$$
+
+The per-period P&L is thus the **cumulative real appreciation since financial close**. The project gains exactly when domestic inflation has cumulatively outpaced nominal depreciation, and falls into shortfall when the currency has depreciated in real terms. The inflation level itself drops out — it is passed through by the indexed tariff — leaving only the real component as risk. This is precisely the inflation/real split flagged in the motivation, now explicit rather than asserted.
+
+The present value at close of the lifetime P&L is
+
+$$
+V_i \;=\; \int_{0}^{T}\frac{R_{i,t}}{(1+\rho)^{\,t}}\,dt
+\;\approx\; \int_{0}^{T}\frac{1}{(1+\rho)^{\,t}}\!\left[\int_{0}^{t}\big(\pi_{i,u}-\dot s_{i,u}\big)\,du\right]dt ,
+$$
+
+a discounted double integral of real appreciation. The realised profit ($V_i>0$) or loss ($V_i<0$) is $100\cdot V_i$, the 100 reflecting the constant debt service. A non-constant profile would keep the service schedule inside the integral; back-loading it shifts weight onto more heavily discounted periods and shrinks $|V_i|$.
+
+## Instrument
+
+Let the **Facility** $G$ provide emergency liquidity. Whenever $R_{i,t}<0$, $G$ advances $100\,|R_{i,t}|$ so the project can meet its 100 of debt service; whenever $R_{i,t}>0$, the project escrows the surplus in an interest-bearing USD account to repay $G$ at $T$. Equivalently, $G$ tops the project's coverage back up to DSCR $=1$ in every period. Netting advances against escrowed surpluses, $G$'s present-value payout is
+
+$$
+L_i \;=\; 100\,(-V_i)^{+}, \qquad \mathbb{E}[L_i] \;=\; -\,100\,\mathbb{E}[V_i]\ \text{ (mean basis)} ,
+$$
+
+so $G$ is made whole with interest when $V_i\ge 0$ and absorbs $100\,|V_i|$ when $V_i<0$. The actuarially fair premium covers $\mathbb{E}[L_i]$ (abstracting from solvency capital and profit loadings).
+
+**Cost relative to the debt stock, and the LLCR.** Since debt service is $n$ payments of 100, the amount borrowed is their present value,
+
+$$
+D \;=\; 100\,A_{\rho,n}, \qquad A_{\rho,n}=\frac{1-(1+\rho)^{-n}}{\rho}.
+$$
+
+The debt stock is the natural denominator, because the cover is in effect insurance on the loan-life coverage ratio. The present value of dollar CFADS over the loan life is $\int_0^T 100(1+R_{i,t})(1+\rho)^{-t}\,dt = D + 100\,V_i$, so
+
+$$
+\text{LLCR}_i \;=\; \frac{\text{PV}_0\!\big(\text{CFADS}^{\$}\big)}{D} \;=\; 1 + \frac{100\,V_i}{D} \;=\; 1 + \frac{V_i}{A_{\rho,n}} .
+$$
+
+The instrument draws exactly when $\text{LLCR}_i<1$ and tops it back to one. Its expected cost per dollar of debt is therefore the expected shortfall of the loan-life coverage ratio below unity:
+
+$$
+\frac{\mathbb{E}[L_i]}{D} \;=\; -\,\frac{\mathbb{E}[V_i]}{A_{\rho,n}} \;=\; \mathbb{E}\big[\,1-\text{LLCR}_i\,\big]
+$$
+
+(with the option-aware refinement $\mathbb{E}\big[(1-\text{LLCR}_i)^{+}\big]$ once the asymmetry of $L_i$ is priced).
+
+**Equivalent annuity.** Converting this upfront cost into a level annual premium $\Psi$ means annuitising — dividing the present value by $A_{\rho,n}$:
+
+$$
+\Psi \;=\; \frac{\mathbb{E}[L_i]}{A_{\rho,n}} \;=\; -\,\frac{100\,\mathbb{E}[V_i]}{A_{\rho,n}},
+\qquad
+\frac{\Psi}{100} \;=\; -\,\frac{\mathbb{E}[V_i]}{A_{\rho,n}},
+$$
+
+the latter expressing the premium as a fraction of the constant annual debt service.
+
+**Equivalent interest-rate add-on.** Expressed against principal, the annual premium is an add-on $\Delta r$ to the loan rate $r$:
+
+$$
+\Delta r \;=\; \frac{\Psi}{D} \;=\; \frac{1}{A_{\rho,n}}\,\mathbb{E}\big[\,1-\text{LLCR}_i\,\big] \;=\; -\,\frac{\mathbb{E}[V_i]}{A_{\rho,n}^{2}}
+$$
+
+i.e. the additional coupon, as a fraction of principal, needed to fund cover for the real-exchange-rate risk. The chain is transparent: the expected LLCR shortfall below one is the cost per dollar of debt; annuitising it gives the premium; and the premium over principal is the equivalent add-on $\Delta r$.

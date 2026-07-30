@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python -c ' *)",
+      "Bash(python3 -c ' *)",
+      "Bash(awk -F, 'NR==1 {for\\(i=1;i<=NF;i++\\) if\\($i==\"ZAFNECONPRVTXN\"||$i==\"LSONECONPRVTXN\"||$i==\"ZAFPANUSATLS\"||$i==\"LSOPANUSATLS\"\\) {col[i]=$i}} NR>1 {row=$1; out=row; for\\(i in col\\) out=out\" \"col[i]\"=\"$i; print out}' /mnt/c/code/currency/data/priceIndex_and_exchangeRate_series_2025_SP.csv)",
+      "WebFetch(domain:api.worldbank.org)"
+    ]
+  }
+}

@@ -1,0 +1,11 @@
+project:
+  type: default
+
+format:
+  html:
+    theme: cosmo
+    toc: true
+    self-contained: true
+
+execute:
+  echo: false
