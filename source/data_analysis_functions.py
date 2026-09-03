@@ -721,3 +721,242 @@ def calculate_event_based_risk_premium(events, df_events):
     }
 
 
+
+# ---------------------------------------------------------------------------
+# Tariff indexation
+#
+# The baseline model assumes the PPA tariff is indexed continuously and
+# contemporaneously to the domestic price level, so that dollar revenue tracks
+# Q = P/S exactly. Real contracts do not work that way. The functions below
+# replace P with an *applied* index P~ -- the index actually embedded in the
+# tariff -- and leave everything downstream (R, V, LLCR, premium, delta r)
+# unchanged, since the project's dollar revenue index is then Q~ = P~/S.
+#
+# Five knobs, each drawn from an observed mechanism:
+#
+#   lag             periods between the index reference date and the date it is
+#                   applied. Inflation-linked bonds: 3 months (Canada/US), 8
+#                   months (old UK). REIPPPP: about 9 months.
+#   reset_every     periods the nominal tariff is held flat between
+#                   adjustments; 1 = continuous. Ghana PURC AAF: quarterly.
+#                   Nigeria MYTO minor review: biannual. REIPPPP: annual.
+#   ref_window      periods averaged to form the reference index. REIPPPP uses
+#                   the preceding calendar year's average CPI, not a point read.
+#   threshold       log movement required before a reset is executed. MYTO
+#                   adjusts only on a material variation of plus/minus 5%.
+#   share           fraction of the index movement passed through (partial
+#                   indexation); 1.0 = full.
+#
+# plus an optional true-up, which is a different animal from the five above:
+#
+#   arrears_recovery  fraction of accumulated under-recovery repaid later, as
+#                   in Eskom's Regulatory Clearing Account. A hold with no
+#                   recovery is a permanent level loss; a true-up turns the
+#                   same event into a timing gap. Recovery in practice runs
+#                   3-6 years behind the cost.
+#
+# DEFAULTS REPRODUCE THE CURRENT MODEL EXACTLY. With steps_per_year=1, lag=0,
+# reset_every=1, ref_window=1, threshold=0, share=1 the applied index is the
+# raw annual price level and Q~ is identical to Q, element for element.
+#
+# Sub-annual rules (quarterly, biannual) need steps_per_year > 1, which
+# interpolates the annual period-averages onto a finer grid and averages the
+# resulting dollar revenue back up over the year. That re-aggregation is not
+# free: it moves the pooled premium by roughly 2bp on its own, more than the
+# effect of any realistic timing lag. Compare like with like -- read a
+# sensitivity against a full-indexation baseline computed at the same
+# steps_per_year, never against the annual headline number.
+# ---------------------------------------------------------------------------
+
+INDEXATION_FULL = dict(lag=0, reset_every=1, ref_window=1, threshold=0.0, share=1.0)
+
+
+def _upsample_log(values, steps_per_year=1):
+    """Log-linear interpolation of an annual period-average series onto a
+    sub-annual grid, anchoring each annual observation at the middle of its
+    year. steps_per_year=1 returns log(values) unchanged.
+
+    The ends are held flat rather than extrapolated (np.interp clamps), so the
+    first and last half-year are approximated by the annual figure itself.
+    Extrapolating to NaN instead would silently drop the most recent window for
+    every country.
+    """
+    v = np.log(np.asarray(values, dtype=float))
+    if steps_per_year == 1:
+        return v
+    m = int(steps_per_year)
+    ok = np.isfinite(v)
+    anchors = np.arange(len(v)) * m + (m - 1) / 2.0
+    return np.interp(np.arange(len(v) * m), anchors[ok], v[ok])
+
+
+def applied_log_index(log_price, t0, n_steps, lag=0, reset_every=1,
+                      ref_window=1, threshold=0.0, share=1.0):
+    """Log of the index actually embedded in the tariff, step by step.
+
+    log_price : log price index on the working grid
+    t0        : grid position of financial close (the contract's base date)
+    n_steps   : contract length in grid steps
+
+    The base is the reference index observed at close, so the escalation factor
+    is 1 at t0 by construction and a constant offset in log_price cancels out
+    of R = Q~/Q~[0] - 1.
+    """
+    def reference(t):
+        end = max(0, t - lag)
+        start = max(0, end - ref_window + 1)
+        seg = log_price[start:end + 1]
+        return float(np.mean(seg)) if len(seg) else float(log_price[0])
+
+    base = applied = reference(t0)
+    path = np.empty(n_steps)
+    for k in range(n_steps):
+        if k > 0 and reset_every > 0 and k % reset_every == 0:
+            candidate = base + share * (reference(t0 + k) - base)
+            if abs(candidate - applied) >= threshold:
+                applied = candidate
+        path[k] = applied
+    return path
+
+
+def indexed_revenue_path(log_price, log_fx, t0, n_steps,
+                         arrears_recovery=0.0, recovery_periods=None,
+                         arrears_rate=0.0, **rule):
+    """Dollar revenue index over a contract: exp(applied index - log fx), plus
+    an optional true-up surcharge amortising accumulated under-recovery."""
+    applied = applied_log_index(log_price, t0, n_steps, **rule)
+    revenue = np.exp(applied - log_fx[t0:t0 + n_steps])
+    if arrears_recovery <= 0.0:
+        return revenue
+
+    allowed = np.exp(log_price[t0:t0 + n_steps] - log_fx[t0:t0 + n_steps])
+    horizon = int(recovery_periods or rule.get('reset_every', 1) or 1)
+    surcharge = np.zeros(n_steps)
+    balance = 0.0
+    for k in range(n_steps):
+        # accrue the shortfall net of any surcharge already being paid
+        balance = balance * (1.0 + arrears_rate) + (allowed[k] - revenue[k] - surcharge[k])
+        if k > 0 and k % horizon == 0:
+            claim = arrears_recovery * balance
+            balance -= claim
+            surcharge[k:k + horizon] += claim / horizon
+    return revenue + surcharge
+
+
+def utility_buffered_payment_path(ppa, retail, buffer_capacity=np.inf,
+                                  passthrough=1.0, arrears_rate=0.0):
+    """What the IPP is actually paid, once the offtaker's balance sheet is put
+    between the PPA obligation and the retail tariff.
+
+    The two tiers are different kinds of object. The PPA tariff is contractual:
+    it escalates by whatever the contract says, and the offtaker owes it whether
+    or not the regulator has let the retail tariff keep up. The retail tariff is
+    political. The difference lands on the utility, which can carry it for a
+    while and not indefinitely -- which is why Africa's state utilities look the
+    way they do.
+
+    ppa, retail : per-period LCU obligation and revenue, normalised internally
+                  so that retail exactly covers the PPA payment at close (the
+                  utility's analogue of the project's DSCR = 1 assumption)
+    buffer_capacity : how large a cumulative deficit the balance sheet can
+                  carry, in periods of PPA payment. np.inf = the offtaker is
+                  never the binding constraint, which is the model's default
+                  and reduces this function to the identity.
+    passthrough : share of the un-absorbed deficit that lands on the IPP as
+                  non-payment. The remainder is a sovereign bailout -- Nigeria's
+                  NBET payment-assurance facility, Kenya's Treasury letters of
+                  support -- which is the ad hoc version of the instrument this
+                  paper prices.
+    arrears_rate : interest accruing on amounts owed to the IPP but unpaid.
+
+    Returns the per-period payment actually received, on the same normalisation
+    as `ppa`. Arrears are repaid out of later surpluses, so a temporary squeeze
+    is a timing gap and only a persistent one is a loss.
+    """
+    ppa = np.asarray(ppa, dtype=float) / float(ppa[0])
+    retail = np.asarray(retail, dtype=float) / float(retail[0])
+    paid = np.empty(len(ppa))
+    carried = 0.0    # deficit sitting on the utility balance sheet
+    arrears = 0.0    # owed to the IPP and unpaid
+
+    for k in range(len(ppa)):
+        arrears *= (1.0 + arrears_rate)
+        gap = ppa[k] - retail[k]
+        if gap >= 0.0:
+            absorbed = min(gap, max(0.0, buffer_capacity - carried))
+            carried += absorbed
+            unpaid = (gap - absorbed) * passthrough
+            arrears += unpaid
+            paid[k] = ppa[k] - unpaid
+        else:
+            surplus = -gap
+            repaid = min(surplus, arrears)
+            arrears -= repaid
+            carried = max(0.0, carried - (surplus - repaid))
+            paid[k] = ppa[k] + repaid
+    return paid
+
+
+def compute_indexed_residuals(df, years=15, discount_rate=0.05, start_year=None,
+                              price_col='cpi', fx_col='exchange_rate',
+                              group_col='iso3', name_col='country',
+                              steps_per_year=1, retail_rule=None,
+                              buffer_capacity=np.inf, buffer_passthrough=1.0,
+                              buffer_arrears_rate=0.0, **rule):
+    """Rolling-window PV of lifetime P&L per unit of debt stock, under a given
+    indexation rule. Mirrors compute_terminal_residuals but with the applied
+    index in place of the raw price level.
+
+    `rule` is the PPA's own indexation -- what the IPP is contractually owed.
+    Pass `retail_rule` to add the offtaker tier: the retail tariff is then
+    indexed by that second rule, and the IPP is paid in full only while the
+    utility's balance sheet can carry the difference. `buffer_capacity` is in
+    years of PPA payment. Leaving `retail_rule` at None assumes the offtaker
+    always pays, which is what the model does today.
+
+    At the default rule this returns exactly what the current model returns on
+    Q = P/S, so any deviation is the indexation rule and not the plumbing.
+    """
+    af = (1 - (1 + discount_rate) ** -years) / discount_rate
+    m = int(steps_per_year)
+    out = []
+
+    for key, g in df.dropna(subset=[price_col, fx_col]).groupby(group_col):
+        g = g.sort_values('year').reset_index(drop=True)
+        n = len(g)
+        if n < years:
+            continue
+        log_price = _upsample_log(g[price_col].to_numpy(), m)
+        log_fx = _upsample_log(g[fx_col].to_numpy(), m)
+
+        for i0 in range(0, n - years + 1):
+            win = g.iloc[i0:i0 + years]
+            if start_year is not None and int(win['year'].iloc[0]) < start_year:
+                continue
+            t0, n_steps = i0 * m, years * m
+            if retail_rule is None:
+                revenue = indexed_revenue_path(log_price, log_fx, t0, n_steps, **rule)
+            else:
+                ppa = np.exp(applied_log_index(log_price, t0, n_steps, **rule))
+                retail = np.exp(applied_log_index(log_price, t0, n_steps, **retail_rule))
+                paid = utility_buffered_payment_path(
+                    ppa, retail, buffer_capacity=buffer_capacity * m,
+                    passthrough=buffer_passthrough, arrears_rate=buffer_arrears_rate)
+                revenue = paid * np.exp(-log_fx[t0:t0 + n_steps])
+            annual = revenue.reshape(years, m).mean(axis=1)
+            if not np.isfinite(annual).all() or annual[0] <= 0:
+                continue
+
+            R_it = annual / annual[0] - 1.0
+            t = np.arange(1, years + 1, dtype=float)
+            V_i = float(np.sum(R_it * (1.0 + discount_rate) ** (-t)))
+            out.append({
+                group_col: key,
+                name_col: win[name_col].iloc[0] if name_col in win else key,
+                'window_start': int(win['year'].iloc[0]),
+                'window_end': int(win['year'].iloc[-1]),
+                'net_pv_by_debt_stock': V_i / af,
+                'loss': min(V_i / af, 0.0),
+            })
+
+    return pd.DataFrame(out)
