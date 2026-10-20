@@ -151,29 +151,45 @@ def compute_terminal_residuals(
     
     df must have: 'country', 'year', 'hybrid_index'
 
+    `years` is the tenor n: n live fixings, over a window of n+1 annual
+    observations from financial close to maturity.
+
     Returns DataFrame with:
-      country, window_start, window_end, baseline_value, net_pv, loss
+      country, window_start, window_end, baseline, net_pv_by_debt_stock, loss
+
+    `net_pv_by_debt_stock` is the discounted loan-life P&L normalised once by
+    the annuity factor, so it reads as a fraction of the debt stock.
+
+    NOTE this is the OLD normalisation, kept because the MFMOD-era notebooks
+    (SolvencyAnalysis, consolidated_currency_analysis, wdi_hybrid_analysis,
+    nominal_vs_real_comparison, regime_and_diversification_analysis) still read
+    this column. The net cover balance V is now defined as Lambda_w /
+    delta_bar, in years of debt service -- see compute_indexed_residuals and
+    compute_terminal_residuals_wdi in paper_draft.ipynb, which are A_{n,rho}
+    times the value returned here.
     """
     out = []
     af = (1 - (1 + discount_rate) ** -years) / discount_rate
+    n_obs = years + 1           # close-year observation, then n fixings
     
     for country, g in df.groupby("country"):
         g = g.sort_values("year").reset_index(drop=True)
         n = len(g)
         
-        if n < years:
+        if n < n_obs:
             continue
 
-        # choose window starts
+        # choose window starts. Consecutive tenors share an endpoint -- the
+        # maturity of the first is the close of the second -- so the step is n.
         if window_mode == "two_non_overlapping":
-            starts = list(range(0, n - years + 1, years))[:2]  # up to 2 per run
+            starts = list(range(0, n - n_obs + 1, years))[:2]  # up to 2 per run
         elif window_mode == "rolling":
-            starts = list(range(0, n - years + 1))
+            starts = list(range(0, n - n_obs + 1))
         else:
             raise ValueError("window_mode must be 'two_non_overlapping' or 'rolling'")
 
         for i0 in starts:
-            win = g.iloc[i0:i0+years].copy()
+            win = g.iloc[i0:i0+n_obs].copy()
 
             # skip windows with missing values in fx_index
             if win["fx_index"].isna().any():
@@ -182,8 +198,9 @@ def compute_terminal_residuals(
             base = float(win["fx_index"].iloc[0])
             base_nominal = float(win["nominal_fx"].iloc[0])
 
-            # signed normalized deviation
-            git = (win["fx_index"].to_numpy() / base) - 1.0
+            # signed normalized deviation at the n fixings; the close year
+            # sets the strike (git = 0 there) and is not a fixing.
+            git = (win["fx_index"].to_numpy()[1:] / base) - 1.0
             # git_nominal = (win["nominal_fx"].to_numpy() / base_nominal) - 1.0
 
             # discount factors to start of window (year-end cashflows)
@@ -192,7 +209,12 @@ def compute_terminal_residuals(
 
             piit = float(np.sum(git * dfactors))
             # net_pv_nominal= float(np.sum(git_nominal * dfactors))
-            net_pv_per_debt_stock = piit / af**2
+            # One division by the annuity factor, not two: piit is the raw
+            # discounted P&L per unit of annual debt service, so piit / af is
+            # already the net cover balance V as a fraction of the debt stock
+            # (D = af * annual debt service). Dividing twice returned V / af,
+            # roughly a tenth of the intended quantity.
+            net_pv_per_debt_stock = piit / af
             loss   = min(net_pv_per_debt_stock, 0.0)
 
             out.append({
@@ -903,9 +925,18 @@ def compute_indexed_residuals(df, years=15, discount_rate=0.05, start_year=None,
                               steps_per_year=1, retail_rule=None,
                               buffer_capacity=np.inf, buffer_passthrough=1.0,
                               buffer_arrears_rate=0.0, **rule):
-    """Rolling-window PV of lifetime P&L per unit of debt stock, under a given
-    indexation rule. Mirrors compute_terminal_residuals but with the applied
-    index in place of the raw price level.
+    """Rolling-window PV of lifetime P&L per unit of annual debt service, under
+    a given indexation rule. Mirrors the window convention of
+    compute_terminal_residuals but with the applied index in place of the raw
+    price level.
+
+    Returns the net cover balance V = Lambda_w / delta_bar, in years of debt
+    service, matching `compute_terminal_residuals_wdi` in paper_draft.ipynb. No
+    annuity factor enters: dividing the pooled shortfall Theta by A_{n,rho} is
+    the caller's job, and is what turns the loss into the premium Psi.
+
+    `years` is the tenor n: n debt-service payments, n live fixings, and a
+    window spanning n+1 annual observations from close to maturity.
 
     `rule` is the PPA's own indexation -- what the IPP is contractually owed.
     Pass `retail_rule` to add the offtaker tier: the retail tariff is then
@@ -915,25 +946,25 @@ def compute_indexed_residuals(df, years=15, discount_rate=0.05, start_year=None,
     always pays, which is what the model does today.
 
     At the default rule this returns exactly what the current model returns on
-    Q = P/S, so any deviation is the indexation rule and not the plumbing.
+    X = P/S, so any deviation is the indexation rule and not the plumbing.
     """
-    af = (1 - (1 + discount_rate) ** -years) / discount_rate
     m = int(steps_per_year)
+    n_obs = years + 1           # close-year observation, then n fixings
     out = []
 
     for key, g in df.dropna(subset=[price_col, fx_col]).groupby(group_col):
         g = g.sort_values('year').reset_index(drop=True)
         n = len(g)
-        if n < years:
+        if n < n_obs:
             continue
         log_price = _upsample_log(g[price_col].to_numpy(), m)
         log_fx = _upsample_log(g[fx_col].to_numpy(), m)
 
-        for i0 in range(0, n - years + 1):
-            win = g.iloc[i0:i0 + years]
+        for i0 in range(0, n - n_obs + 1):
+            win = g.iloc[i0:i0 + n_obs]
             if start_year is not None and int(win['year'].iloc[0]) < start_year:
                 continue
-            t0, n_steps = i0 * m, years * m
+            t0, n_steps = i0 * m, n_obs * m
             if retail_rule is None:
                 revenue = indexed_revenue_path(log_price, log_fx, t0, n_steps, **rule)
             else:
@@ -943,11 +974,12 @@ def compute_indexed_residuals(df, years=15, discount_rate=0.05, start_year=None,
                     ppa, retail, buffer_capacity=buffer_capacity * m,
                     passthrough=buffer_passthrough, arrears_rate=buffer_arrears_rate)
                 revenue = paid * np.exp(-log_fx[t0:t0 + n_steps])
-            annual = revenue.reshape(years, m).mean(axis=1)
+            annual = revenue.reshape(n_obs, m).mean(axis=1)
             if not np.isfinite(annual).all() or annual[0] <= 0:
                 continue
 
-            R_it = annual / annual[0] - 1.0
+            # annual[0] is the close year: it sets the strike, it is not a fixing.
+            R_it = annual[1:] / annual[0] - 1.0
             t = np.arange(1, years + 1, dtype=float)
             V_i = float(np.sum(R_it * (1.0 + discount_rate) ** (-t)))
             out.append({
@@ -955,8 +987,8 @@ def compute_indexed_residuals(df, years=15, discount_rate=0.05, start_year=None,
                 name_col: win[name_col].iloc[0] if name_col in win else key,
                 'window_start': int(win['year'].iloc[0]),
                 'window_end': int(win['year'].iloc[-1]),
-                'net_pv_by_debt_stock': V_i / af,
-                'loss': min(V_i / af, 0.0),
+                'V': V_i,
+                'loss': min(V_i, 0.0),
             })
 
     return pd.DataFrame(out)

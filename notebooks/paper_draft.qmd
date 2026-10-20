@@ -1,0 +1,2368 @@
+---
+title: Pricing Currency Cover for Inflation-Indexed Infrastructure Revenues
+author: Francis Dennig
+date: today
+abstract: |
+  PLACEHOLDER — draft for discussion, to be tightened once the results are final.
+  Hard-currency debt against local-currency revenue is priced as though the whole
+  nominal exchange rate were at risk. Where the power purchase agreement indexes
+  the tariff to domestic prices, it is not: inflation passes through to the dollar
+  value of revenue, and only the residual movement is left uncovered. We measure
+  that residual directly as the dollar unit-revenue index $X = P/S$, and price
+  cover on it actuarially over every rolling 15-year window of African WDI data
+  since 1995. The instrument — an emergency liquidity facility that advances debt
+  service whenever $X$ sits below its level at financial close, is repaid out of
+  later surpluses, and settles net at maturity — costs about 30 basis points on
+  the loan margin pooled across countries, and about 165 basis points for
+  Nigeria. The affordability comes from the cyclicality of the
+  residual, not from optimism about depreciation: an institution with long-term
+  capital, able to hold a position through a 5-10 year adverse swing, bears
+  materially less risk than the market prices.
+format:
+  typst:
+    toc: true
+    papersize: a4
+    dpi: 192
+    margin:
+      x: 2.2cm
+      'y': 2.2cm
+  html:
+    toc: true
+    embed-resources: true
+number-sections: true
+execute:
+  echo: false
+  warning: false
+jupyter: python3
+---
+
+
+```{python}
+#| include: false
+#| execution: {iopub.execute_input: '2026-09-17T07:26:22.803417Z', iopub.status.busy: '2026-09-17T07:26:22.802420Z', iopub.status.idle: '2026-09-17T07:26:23.472443Z', shell.execute_reply: '2026-09-17T07:26:23.472443Z'}
+# Global parameters and data (ported from wdi_hybrid_analysis.ipynb, cell 0).
+import os
+import pandas as pd
+start_year = 1995
+# The discount rate is read from the environment so that the same source
+# renders the sensitivity version without a second copy of the document:
+#   FX_DISCOUNT_RATE=0.10 quarto render paper_draft.qmd --to typst
+# Note that the prose quotes figures computed at 5%; only the computed
+# tables and charts follow this parameter.
+discount_rate = float(os.environ.get("FX_DISCOUNT_RATE", "0.05"))
+window_length = 15
+annuity_factor = (1.0 - (1.0 + discount_rate) ** -window_length) / discount_rate
+
+# `us_cpi` (WDI FP.CPI.TOTL for the United States) is merged into the panel by
+# source/fetch_wdi_us_cpi.py; rerun that script to refresh it.
+df = pd.read_csv('../data/wdi_africa_long.csv')
+df = df[df['iso3'] != 'LSO'].reset_index(drop=True)  # Lesotho CPI has multiple uncorrected basket/base-year breaks (1999, 2002, 2009)
+df['usd_per_lcu'] = 1 / df['exchange_rate']
+df['X'] = df['cpi'] / df['exchange_rate']   # dollar unit-revenue index: USD value of a fixed local basket
+df['Q'] = df['X'] / df['us_cpi']            # real exchange rate: X deflated a second time, by the US price level
+
+
+# Exchange-rate regime classification, keyed by ISO3
+# (copy of source/data_analysis_functions.py:31; importing that module would
+# load the MFMOD extract, which this notebook does not use).
+fx_regime = {
+    # CFA Franc Zone - WAEMU
+    'BEN': 'EUR-linked', 'BFA': 'EUR-linked', 'CIV': 'EUR-linked', 'GNB': 'EUR-linked',
+    'MLI': 'EUR-linked', 'NER': 'EUR-linked', 'SEN': 'EUR-linked', 'TGO': 'EUR-linked',
+    # CFA Franc Zone - CEMAC
+    'CMR': 'EUR-linked', 'CAF': 'EUR-linked', 'TCD': 'EUR-linked', 'COG': 'EUR-linked',
+    'GNQ': 'EUR-linked', 'GAB': 'EUR-linked',
+    # Other EUR-pegged
+    'COM': 'EUR-linked', 'CPV': 'EUR-linked',
+    # Common Monetary Area (LSO itself is excluded from the data)
+    'LSO': 'ZAR-linked', 'NAM': 'ZAR-linked', 'SWZ': 'ZAR-linked',
+}
+```
+
+```{python}
+#| include: false
+#| execution: {iopub.execute_input: '2026-09-17T07:26:23.473456Z', iopub.status.busy: '2026-09-17T07:26:23.473456Z', iopub.status.idle: '2026-09-17T07:26:23.866689Z', shell.execute_reply: '2026-09-17T07:26:23.866183Z'}
+# Charting helpers (ported from wdi_hybrid_analysis.ipynb, cell 1:
+# compute_V, shading helpers, and the two-axis country_chart).
+import numpy as np
+import altair as alt
+# Render charts to static PNG in the kernel (needs vl-convert-python, installed
+# in .venv). Viewer-proof: notebook front-ends (VS Code / JupyterLab) render raw
+# vegalite JSON through their own vega bundle and can inject a dark display
+# theme that overrides the spec config, hiding axis/legend/title text. PNGs
+# also carry straight through to Quarto PDF. For interactive tooltips while
+# exploring, temporarily switch to: alt.renderers.enable('html')
+alt.renderers.enable('png', scale_factor=2.0)
+
+# Theme pinning ALL ink colors, not just the background: dark-mode viewers
+# (VS Code / JupyterLab) render vega-lite with the dark theme's light text,
+# so forcing only a white background yields invisible axis labels, ticks and
+# legends (white-on-white). alt.theme is the non-deprecated 5.5+ API.
+@alt.theme.register('paper', enable=True)
+def _paper_theme():
+    ink = '#333333'
+    return {'config': {
+        'background': 'white',
+        'title': {'color': ink},
+        'axis': {'labelColor': ink, 'titleColor': ink, 'tickColor': ink,
+                 'domainColor': ink, 'gridColor': '#dddddd'},
+        'legend': {'labelColor': ink, 'titleColor': ink},
+        'header': {'labelColor': ink, 'titleColor': ink},
+        'text': {'color': ink},
+    }}
+
+def compute_V(cdata, t0, T, col='X', rho=discount_rate, n=window_length):
+    """Net cover balance V over [t0, T], where t0 is the year of financial close
+    and T is maturity. The close-year observation sets the strike and is not a
+    fixing, so the T - t0 fixings run t0+1..T and are discounted at elapsed
+    years 1..T-t0. Normalised by the annuity factor A_{n,rho} so that it reads
+    as a fraction of the debt stock (D = A_{n,rho} * annual debt service)."""
+    win = cdata[(cdata['year'] >= t0) & (cdata['year'] <= T)].sort_values('year')
+    v = win[col].to_numpy()
+    g = v[1:] / v[0] - 1.0
+    t = np.arange(1, len(g) + 1, dtype=float)
+    dfactors = (1.0 + rho) ** (-t)
+    af = (1.0 - (1.0 + rho) ** -n) / rho
+    return float(np.sum(g * dfactors) / af)
+
+def _shade_and_text_layers(cdata, col, hline, shades):
+    layers = []
+    text_rows = []
+    if shades and hline is not None:
+        for shade in shades:
+            y_start, y_end, color = shade[0], shade[1], shade[2]
+            label = shade[3] if len(shade) > 3 else None
+            seg = cdata[(cdata['year'] >= y_start) & (cdata['year'] <= y_end)].copy()
+            seg['hline'] = hline
+            layers.append(
+                alt.Chart(seg).mark_area(opacity=0.3, color=color).encode(
+                    x=alt.X('year:O'),
+                    y=alt.Y(f'{col}:Q'),
+                    y2=alt.Y2('hline:Q')
+                )
+            )
+            if label is not None and not seg.empty:
+                mid_year = int(seg['year'].iloc[len(seg)//2])
+                mid_y = (seg[col].mean() + hline) / 2
+                text_rows.append({'year': mid_year, 'y': mid_y, 'text': label, 'color': color})
+    return layers, text_rows
+
+def country_chart(iso3, start_year=start_year,
+                  x_hline=None, shades=None,
+                  usd_hline=None, usd_shades=None,
+                  usd_y_range=None, h_y_range=None,
+                  price_base_year=None):
+    cdata = df[(df['iso3'] == iso3) & (df['year'] >= start_year)].dropna(subset=['usd_per_lcu', 'X']).copy()
+    country_name = cdata['country'].iloc[0]
+
+    # Optional third series: the price level, normalised to 1 in the base year.
+    # It shares the left-hand axis with X because both are indices and
+    # X = P * (1/S) - the point being that X's path is P's smooth climb times
+    # the nominal rate's fall. Vega-Lite can only place two y-axes.
+    p_label = None
+    if price_base_year is not None:
+        p_base = df[(df['iso3'] == iso3) & (df['year'] == price_base_year)]['cpi'].iloc[0]
+        cdata['P_idx'] = cdata['cpi'] / p_base
+        p_label = f'P ({price_base_year}=1)'
+
+    legend_setting = alt.Legend(title="Series", orient="bottom")
+    # Pinned series colours, in legend order: X, P, 1/S. The legend follows the
+    # scale domain, and pinning also stops a third domain value from re-sorting
+    # the domain and recolouring X and 1/S in the panels that show P.
+    series_scale = alt.Scale(
+        domain=['X'] + ([p_label] if p_label else []) + ['1/S'],
+        range=['#4c78a8'] + (['#54a24b'] if p_label else []) + ['#f58518'],
+    )
+
+    usd_scale = alt.Scale(domain=list(usd_y_range)) if usd_y_range is not None else alt.Undefined
+    x_scale = alt.Scale(domain=list(h_y_range)) if h_y_range is not None else alt.Undefined
+
+    # --- RIGHT AXIS: 1/S ---
+    # Drawn first so the X/P group layers on top of the 1/S shading; the axis
+    # side is set by the explicit orient, not by layer order.
+    usd_layers = []
+    usd_shade_layers, usd_text_rows = _shade_and_text_layers(cdata, 'usd_per_lcu', usd_hline, usd_shades)
+    usd_layers.extend(usd_shade_layers)
+
+    usd_layers.append(
+        alt.Chart(cdata).mark_line(point=True).encode(
+            x=alt.X('year:O', title='Year'),
+            y=alt.Y('usd_per_lcu:Q', title='1/S  (USD per LCU)',
+                    axis=alt.Axis(orient='right'), scale=usd_scale),
+            color=alt.Color('Metric:N', scale=series_scale, legend=legend_setting),
+            tooltip=['year', 'usd_per_lcu']
+        ).transform_calculate(Metric="'1/S'")
+    )
+
+    if usd_hline is not None:
+        usd_layers.append(
+            alt.Chart(pd.DataFrame({'y':[usd_hline]})).mark_rule(color='blue', strokeDash=[4,4]).encode(
+                y=alt.Y('y:Q')
+            )
+        )
+
+    if usd_text_rows:
+        usd_layers.append(
+            alt.Chart(pd.DataFrame(usd_text_rows)).mark_text(fontSize=14, fontWeight='bold').encode(
+                x=alt.X('year:O'),
+                y=alt.Y('y:Q'),
+                text=alt.Text('text:N'),
+                color=alt.Color('color:N', scale=None, legend=None)
+            )
+        )
+
+    usd_chart = alt.layer(*usd_layers)
+
+    # --- LEFT AXIS: X, and P when requested ---
+    x_axis_title = ('X = P / S  (USD per local basket)' if p_label is None
+                    else f'X = P / S  (USD per local basket), and P ({price_base_year}=1)')
+    x_layers = []
+    x_shade_layers, x_text_rows = _shade_and_text_layers(cdata, 'X', x_hline, shades)
+    x_layers.extend(x_shade_layers)
+
+    x_layers.append(
+        alt.Chart(cdata).mark_line(point=True).encode(
+            x=alt.X('year:O', title='Year'),
+            y=alt.Y('X:Q', title=x_axis_title, axis=alt.Axis(orient='left'), scale=x_scale),
+            color=alt.Color('Metric:N', scale=series_scale, legend=legend_setting),
+            tooltip=['year', 'X']
+        ).transform_calculate(Metric="'X'")
+    )
+
+    if x_hline is not None:
+        x_layers.append(
+            alt.Chart(pd.DataFrame({'y':[x_hline]})).mark_rule(color='red', strokeDash=[4,4]).encode(
+                y=alt.Y('y:Q')
+            )
+        )
+
+    if x_text_rows:
+        x_layers.append(
+            alt.Chart(pd.DataFrame(x_text_rows)).mark_text(fontSize=14, fontWeight='bold').encode(
+                x=alt.X('year:O'),
+                y=alt.Y('y:Q'),
+                text=alt.Text('text:N'),
+                color=alt.Color('color:N', scale=None, legend=None)
+            )
+        )
+
+    if p_label is not None:
+        x_layers.append(
+            alt.Chart(cdata).mark_line(point=True).encode(
+                x=alt.X('year:O', title='Year'),
+                # Same axis spec as the X layer: the two specs merge into the
+                # single left-hand axis, whose domain unions both series.
+                # (axis=None here instead suppresses that merged axis.)
+                y=alt.Y('P_idx:Q', title=x_axis_title,
+                        axis=alt.Axis(orient='left'), scale=x_scale),
+                color=alt.Color('Metric:N', scale=series_scale, legend=legend_setting),
+                tooltip=['year', 'P_idx']
+            ).transform_calculate(Metric=f"'{p_label}'")
+        )
+
+    x_chart = alt.layer(*x_layers)
+
+    return alt.layer(usd_chart, x_chart).resolve_scale(y='independent').properties(
+        title=f"{country_name} (from {start_year})",
+        width=500,
+        height=350
+    )
+
+dza_data = df[(df['iso3']=='DZA') & (df['year']>=start_year)].dropna(subset=['X'])
+x_1998 = dza_data.loc[dza_data['year']==1998, 'X'].iloc[0]
+usd_1998 = df[(df['iso3']=='DZA') & (df['year']==1998)]['usd_per_lcu'].iloc[0]
+usd_2013 = df[(df['iso3']=='DZA') & (df['year']==2013)]['usd_per_lcu'].iloc[0]
+usd_2000 = df[(df['iso3']=='DZA') & (df['year']==2000)]['usd_per_lcu'].iloc[0]
+# The two chart labels are each a PV at the start of their own segment: V_red is
+# based and discounted at the 1998 close, V_green at 2006. They are therefore not
+# addable as printed -- carrying V_green back the eight intervening years is what
+# makes them comparable, and is the arithmetic the Algeria text spells out. The
+# half-point that remains against V_close is the change of base (X_2006 is 1%
+# below X_1998), not a discounting error.
+V_red   = compute_V(dza_data, 1998, 2006, col='X')
+V_green = compute_V(dza_data, 2006, 2013, col='X')
+V_green_at_close = V_green * (1.0 + discount_rate) ** -8
+V_close = compute_V(dza_data, 1998, 2013, col='X')   # net cover balance of the 1998 window
+V_blue  = compute_V(dza_data, 1998, 2013, col='usd_per_lcu')
+print(f"X_1998 (Algeria)         = {x_1998:.4f}")
+print(f"usd_per_lcu_1998 (Algeria) = {usd_1998:.6f}")
+print(f"usd_per_lcu_2013 (Algeria) = {usd_2013:.6f}")
+print(f"usd_per_lcu_2000 (Algeria) = {usd_2000:.6f}")
+print(f"usd_per_lcu_1998to2013 (Algeria) = {(usd_1998-usd_2013)/usd_1998:.6f}")
+print(f"usd_per_lcu_1998to2000 (Algeria) = {(usd_1998-usd_2000)/usd_1998:.6f}")
+print(f"V_X(1998,2006)  at 1998   = {V_red:.4f}")
+print(f"V_X(2006,2013)  at 2006   = {V_green:.4f}")
+print(f"V_X(2006,2013)  at 1998   = {V_green_at_close:.4f}")
+print(f"  sum, both at 1998       = {V_red + V_green_at_close:.4f}")
+print(f"V_X(1998,2013)  at 1998   = {V_close:.4f}   (exact; gap above is the 2006 rebase)")
+print(f"V_1/S(1998,2013)          = {V_blue:.4f}")
+
+```
+
+```{python}
+#| include: false
+#| execution: {iopub.execute_input: '2026-09-17T07:26:23.868720Z', iopub.status.busy: '2026-09-17T07:26:23.868720Z', iopub.status.idle: '2026-09-17T07:26:24.420641Z', shell.execute_reply: '2026-09-17T07:26:24.420641Z'}
+# Ported from wdi_hybrid_analysis.ipynb, cell 3.
+def compute_terminal_residuals_wdi(
+    df,
+    years=window_length,
+    discount_rate=discount_rate,
+    window_mode="rolling", # or "two_non_overlapping",  # 
+    col="X",
+    start_year=None,
+):
+    """Mirror of source.data_analysis_functions.compute_terminal_residuals,
+    operating directly on the wdi_africa_long-shaped df with columns:
+    iso3, country, year, exchange_rate, cpi, us_cpi, usd_per_lcu, X, Q.
+
+    `years` is the tenor n: the number of debt-service payments, and equally the
+    number of live fixings. A window therefore spans n+1 annual observations,
+    from financial close at window_start through maturity at window_end =
+    window_start + n. The close-year observation sets the strike (R = 0 there by
+    construction, since the debt is sized to close-year cash flow) and is NOT a
+    fixing -- including it would park A^-1 (1+rho)^-1 ~ 9% of the averaging
+    weight on a return that cannot move, and make the first debt-service year
+    riskless by assumption.
+
+    For each country, slides the window over the series in `col`, computes
+    R_it = v/v[window_start] - 1 at the n fixings, discounts them back to close
+    at elapsed years 1..n, and returns the net cover balance V: the present
+    value of lifetime P&L (V_raw) normalised by the annuity factor A into a
+    fraction of the debt stock.
+    If `start_year` is given, df is filtered to year >= start_year before
+    any windowing.
+    """
+    if start_year is not None:
+        df = df[df["year"] >= start_year]
+
+    af = (1 - (1 + discount_rate) ** -years) / discount_rate
+    n_obs = years + 1           # close-year observation, then n fixings
+    out = []
+
+    for iso3, g in df.dropna(subset=[col]).groupby("iso3"):
+        g = g.sort_values("year").reset_index(drop=True)
+        n = len(g)
+        if n < n_obs:
+            continue
+
+        if window_mode == "two_non_overlapping":
+            # Consecutive tenors share an endpoint -- the maturity of the first
+            # is the close of the second -- so the step is n, not n+1.
+            starts = list(range(0, n - n_obs + 1, years))[:2]
+        elif window_mode == "rolling":
+            starts = list(range(0, n - n_obs + 1))
+        else:
+            raise ValueError("window_mode must be 'two_non_overlapping' or 'rolling'")
+
+        for i0 in starts:
+            win = g.iloc[i0:i0 + n_obs]
+            if win[col].isna().any():
+                continue
+
+            base = float(win[col].iloc[0])
+            R_it = (win[col].to_numpy()[1:] / base) - 1.0
+            t = np.arange(1, years + 1, dtype=float)
+            dfactors = (1.0 + discount_rate) ** (-t)
+
+            V_raw = float(np.sum(R_it * dfactors))
+            V = V_raw / af
+            loss = min(V, 0.0)
+
+            out.append({
+                "iso3": iso3,
+                "country": win["country"].iloc[0],
+                "window_start": int(win["year"].iloc[0]),
+                "window_end": int(win["year"].iloc[-1]),
+                "baseline": base,
+                "V": V,
+                "loss": loss,
+            })
+
+    return pd.DataFrame(out)
+
+
+from scipy.optimize import brentq
+
+
+def equivalent_rate(expected_loss, discount_rate, years=15):
+    """Translate an expected PV loss (fraction of debt stock) into the
+    equivalent interest rate.
+
+    The expected loss is treated as additional debt, so the inflated principal
+    is (1 + |expected_loss|). Solve for the rate r_new at which the annuity on
+    the original principal (=1) equals the annuity on the inflated principal
+    priced at the original rate, i.e.
+        af(r_new, years) == af0 / (1 + |loss|),
+    where `af0` is the original annuity factor. af is strictly decreasing in r,
+    so the root is unique.
+    """
+    af0 = (1 - (1 + discount_rate) ** -years) / discount_rate
+    target_af = af0 / (1.0 + abs(expected_loss))
+    af = lambda r: (1.0 - (1.0 + r) ** -years) / r
+    return brentq(lambda r: af(r) - target_af, 1e-9, 1.0)
+```
+
+# Motivation: the currency mismatch that blocks the deal
+
+Currency mismatch between local currency revenues in developing countries and the cost of hard currency debt service holds up many infrastructure finance transactions. When such hard currency credit has been provided for developing country electricity generation infrastructure, the currency risk has often been placed on the national utility - "offtaker" - through dollarised power purchase agreements (PPAs). This has led to an exacerbation of these utilities' financial woes from currency devaluations. This has had the knock-on effect of increasing offtaker risk for such projects and generating an additional impediment to the financing of electricity generation projects. Capital costs for such projects are thus affected two-fold by the currency mismatch, by the direct currency risk and by the induced offtaker risk.
+
+This analysis suggests that, when inflation is borne by the consumer, the residual - real - currency risk, is limited when borne by an institution with sufficiently long term capital. This is due to the relatively long period in the cyclicality of the real exchange rate. An institution exposed to real exchange rate risk and able to weather adverse movements lasting 5-10 years will bear significantly less risk than is commonly assumed, even for developing country currency risk. As a result, such institutions are well placed to offer affordable cover to such transactions.
+
+This proposal, analogous to the emergency liquidity facility of the EcoInvest Brazil platform provided by the IaDB, provides insurance against shortfalls in hard currency debt service *triggered by adverse movements the exchange and inflation rates*. The pre-requisite for cover is that revenues are indexed to local currency inflation through appropriate clauses in the power purchase agreement. As we show below, this strips inflation out of the nominal exchange rate risk, leaving only a real exchange rate risk component, which is bounded and cyclical, and consequently allows for affordable cover.
+
+## Notation
+
+**Parameters, fixed throughout:** tenor $n=15$; nominal discount rate $\rho$ = `{python} f"{discount_rate:.2f}"`; annuity factor $A_{n,\rho}=\sum_{k=1}^{n}(1+\rho)^{-k}=\dfrac{1-(1+\rho)^{-n}}{\rho}$ (the index $k$ counts elapsed years).
+
+**Unit of observation:** a *window* $w=(i,\underline{t})\in\mathcal{W}$ — country $i$, financial close at $\underline{t}$, maturity $\bar{t}\equiv\underline{t}+n$. The pool has $N=|\mathcal{W}|$ windows. Windows share the common length $n$ but start at different dates, so calendar years are indexed absolutely, $t=\underline{t},\dots,\bar{t}$, and a window sum runs $\sum_{t=\underline{t}+1}^{\bar{t}}$; the elapsed year $t-\underline{t}$ carries the discounting, so windows of equal length are discounted identically wherever they sit in the sample.
+
+- $P_{i,t}$ — domestic price level (CPI), in LCU; $p\equiv\ln P$, inflation $\pi=\dot p$
+- $P^{*}_{t}$ — US price level; $\pi^{*}$ — US inflation
+- $S_{i,t}$ — nominal exchange rate in LCU per USD, so $\dot s>0$ is a depreciation of the local currency; $s\equiv\ln S$
+- $X_{i,t}\equiv P_{i,t}/S_{i,t}$ — the **dollar unit-revenue index**: the nominal USD value of a fixed domestic basket, i.e. what a kWh of inflation-indexed local revenue is worth in dollars. $x\equiv\ln X=p-s$, so $\dot x=\pi-\dot s$. It is *not* the real exchange rate — it is deflated by domestic prices only
+- $Q_{i,t}\equiv X_{i,t}/P^{*}_{t}$ — the real exchange rate, $X$ deflated a second time by the US price level. Used in the pricing decomposition only
+- $R_{w,t}\equiv X_{i,t}/X_{i,\underline{t}}-1$, for $t=\underline{t},\dots,\bar{t}$ — cumulative (holding-period) return on $X$ since financial close, so $R_{w,\underline{t}}=0$
+- $\tau,\ c,\ \bar{E}$ — real tariff, real unit cost, constant energy output
+- $r$ — loan interest rate; $\rho$ — discount rate; we set $r=\rho$ throughout
+- $A_{n,\rho}$ — annuity factor: the present value of a unit annuity over $n$ periods at rate $\rho$
+- $D$ — debt stock; $\bar\delta$ — level annual debt service, with $D=A_{n,\rho}\,\bar\delta$
+- $\Lambda_w\equiv\bar\delta\sum_{t=\underline{t}+1}^{\bar{t}}R_{w,t}(1+\rho)^{-(t-\underline{t})}$ — discounted loan-life P&L
+- $V_w\equiv\dfrac{\Lambda_w}{D}=\dfrac{1}{A_{n,\rho}}\displaystyle\sum_{t=\underline{t}+1}^{\bar{t}}\frac{R_{w,t}}{(1+\rho)^{t-\underline{t}}}$ — the **net cover balance**: the terminal balance of the cover account as a fraction of principal
+- $L_w\equiv D\max(-V_w,0)$ — ultimate net loss to the Facility
+- $\Psi$ — level annual premium as a share of debt service; $\Delta r$ — margin-equivalent interest-rate add-on
+- $\mathbb{E}[\cdot]$ — expectation; $\mathbb{E}_N[\cdot]\equiv N^{-1}\sum_{w\in\mathcal{W}}[\cdot]$ — sample mean over the pool
+
+In the code below, the DataFrame column `X` holds $X_{i,t}$ (computed as `cpi / exchange_rate`), `Q` holds $Q_{i,t}$ (`X / us_cpi`), and `exchange_rate` holds $S_{i,t}$.
+
+## A stylised project
+
+The analysis below focuses on $X_{i,t}=P_{i,t}/S_{i,t}$, where $P_i$ is the domestic price level and $S_i$ the nominal exchange rate in LCU per USD. As an index, $X$ measures the change in the USD value of a fixed local basket of goods. If the local price of electricity is made to grow at the national inflation rate, $X$ also measures the evolution of the USD value of a MWh. It is easy to see (and we show in detail below) that when tariffs are inflation-adjusted, $X$ is a good measure of the dollar cash flows available for debt service.
+
+Consider, for simplicity, a project in country $i$ reaching financial close at $\underline{t}$ — a window $w=(i,\underline{t})$ — and generating a constant amount of energy $\bar{E}$ over the $n$ years of its debt service, at constant real unit cost $c$, excluding hard-currency debt service, and selling at an inflation-indexed real tariff $\tau$. Debt service runs over the calendar years $t=\underline{t},\underline{t}+1,\dots,\bar{t}$, where $\bar{t}\equiv\underline{t}+n$ is maturity. We keep the calendar year as the index, rather than counting from one, because the empirical work below runs the same $n$-year window from every possible start date: the window's identity lives in its limits $\underline{t}$ and $\bar{t}$, while the elapsed year $t-\underline{t}$ does the discounting. Nominal local-currency revenue is $P_{i,t}\,\tau\,\bar{E}$ and earnings before debt service are $P_{i,t}(\tau-c)\bar{E}$. That is, local-currency cash flows available for debt service (CFADS) are a constant growing at the rate of inflation, and CFADS in dollars are
+
+$$
+\text{CF}^{\$}_{w,t} \;=\; X_{i,t}\,(\tau-c)\,\bar{E},
+\qquad t=\underline{t},\dots,\bar{t} .
+$$
+
+For the sake of exposition, we consider a stylised project in which all debt is in hard currency and debt service is a constant $\bar\delta$ dollars over the entire repayment period.
+
+The annuity factor, for which the formula below pops out of the finite geometric sum, is defined as the present value of a 1 unit annuity for $n$ years at a discount rate of $\rho$, with $k$ counting elapsed years:
+$$
+A_{n,\rho}=\sum_{k=1}^{n}(1+\rho)^{-k}=\frac{1-(1+\rho)^{-n}}{\rho}
+$$
+
+By that definition, the principal that is borrowed at an interest rate $r=\rho$ and repaid with a constant annuity $\bar\delta$ over $n$ years is simply
+$$
+D = A_{n,\rho} \cdot \bar\delta
+$$
+
+We will assume that the debt has been sized so that annual debt service is exactly equal to the dollar CFADS in the first year of operations (and of debt service): $\text{CF}^{\$}_{w,\underline{t}} = X_{i,\underline{t}}(\tau-c)\bar{E} \equiv \bar\delta = D/A_{n,\rho}$
+
+This automatically results in a debt service coverage ratio (DSCR) of one at close, leaving zero buffer for future FX swings; dollar debt service is constant by assumption and CFADS only just cover the debt service requirement when $X_{i,t} = X_{i,\underline{t}}$ is constant. The assumption also implies zero profit in the constant $X$ scenario, a debt service shortfall (and technical default) when $X$ decreases and a surplus when $X$ increases.
+
+Project finance structures usually require a DSCR greater than 120% as a buffer against various risks to which the cash flows are exposed. Still, our assumption of zero buffer is without loss of generality, since the main affordability result below is only strengthened if projected $\text{DSCR}_t>1$.
+
+
+Mathematically the PnL (surplus or shortfall) in year $t$ due to currency or price movements is
+$$
+\text{PL}_{w,t} = \text{CF}^{\$}_{w,t} - \bar\delta = \bar\delta \frac{\text{CF}^{\$}_{w,t} - \text{CF}^{\$}_{w,\underline{t}}}{\text{CF}^{\$}_{w,\underline{t}}} = \bar\delta \cdot  R_{w,t}
+$$
+where
+$$
+R_{w,t} \;\equiv\; \frac{\text{CF}^{\$}_{w,t}}{\text{CF}^{\$}_{w,\underline{t}}} - 1 \;=\; \frac{X_{i,t}}{X_{i,\underline{t}}} - 1 ,
+\qquad t=\underline{t},\dots,\bar{t}
+$$
+
+is the cumulative return on $X$ since close — a holding-period return, not a per-period flow — and $R_{w,\underline{t}}=0$ by construction, since the debt is sized to the close-year cash flow.
+
+Given a discount rate $\rho$, the present value at financial close of the loan life P&L is
+
+$$
+\Lambda_w \;=\; \sum_{t=\underline{t}+1}^{\bar{t}}\bar\delta\, \frac{R_{w,t}}{(1+\rho)^{t-\underline{t}}} = D \cdot \underbrace{\frac{1}{A_{n,\rho}}\sum_{t=\underline{t}+1}^{\bar{t}} \frac{R_{w,t}}{(1+\rho)^{t-\underline{t}}}}_{V_w}
+$$
+Through the constant debt service assumption we can calculate the profit as $V_w$ times the total debt stock. Time varying repayment profiles reweight the sum but don't have a material impact on the results as we show in the robustness checks below.
+
+As such the main object of interest is the *net cover balance*
+$$
+V_w \;=\; \frac{\Lambda_w}{D} = \frac{1}{A_{n,\rho}} \sum_{t=\underline{t}+1}^{\bar{t}} \frac{1}{(1+\rho)^{t-\underline{t}}} \frac{X_{i,t}- X_{i,\underline{t}}}{X_{i,\underline{t}}}
+$$
+
+Two windows of the same country with different closes therefore differ only in the limits of this sum and in the level $X_{i,\underline{t}}$ against which the path is measured: the discount weights $(1+\rho)^{-(t-\underline{t})}$ are the same $n$ numbers for every window. That is what makes the pooled average over $\mathcal{W}$ below a comparison of like with like.
+
+```{python}
+#| execution: {iopub.execute_input: '2026-09-17T07:26:24.422766Z', iopub.status.busy: '2026-09-17T07:26:24.422766Z', iopub.status.idle: '2026-09-17T07:26:25.657879Z', shell.execute_reply: '2026-09-17T07:26:25.657370Z'}
+DZA_chart = country_chart(
+    'DZA',
+    x_hline=x_1998,
+    shades=[
+        (1998, 2006, 'red',   f"{V_red:.2f}"),
+        (2006, 2013, 'green', f"{V_green:.2f}"),
+    ],
+    usd_hline=usd_1998,
+    usd_shades=[
+        (1998, 2013, 'blue', f"{V_blue:.2f}"),
+    ],
+    usd_y_range=(0.006, 0.030),
+    price_base_year=2024,
+)
+S_1998 = df[(df['iso3']=='DZA') & (df['year']==1998)]['usd_per_lcu'].iloc[0]
+S_1999 = df[(df['iso3']=='DZA') & (df['year']==1999)]['usd_per_lcu'].iloc[0]
+S_2000 = df[(df['iso3']=='DZA') & (df['year']==2000)]['usd_per_lcu'].iloc[0]
+S_2002 = df[(df['iso3']=='DZA') & (df['year']==2002)]['usd_per_lcu'].iloc[0]
+# print(f"{(S_2002-S_1998)/S_2002}")
+# print(f"{100/S_1998}")
+# print(f"{5873.8958*S_1999}")
+# print(f"{5873.8958*S_2000}")
+# dza_data
+DZA_chart
+```
+
+## Inflation and the exchange rate
+
+Consider the case of the Algerian Dinar to understand how the exchange rate and price level affect the macroeconomic exposure of a project with local currency revenues. The figure plots $X_{i,t} = P_{i,t}/S_{i,t}$ for the 30 year period between 1995 and 2024, along with its components: the price level $P_{i,t}$ and the nominal exchange rate $1/S_{i,t}$ (in USD per LCU). In the plotted representation the growth rates of the components sum up visually to the growth rate of $X$.
+
+Consider the macroeconomic movements that a local currency project reaching financial close in 1998 and paying 15 years of hard currency debt service must contend with.
+
+During that period the nominal exchange rate dropped 26% from 1.7 to 1.3 Dollar cents per Dinar, with the bulk of the depreciation (22%) taking place in the first two years. 
+
+If the project had (admittedly unlikely) constant nominal Dinar cashflows, it would have had lower dollar CFADS than at financial close in every single year of its debt service (the orange path for $1/S_{i,t}$). Unhedged a constant Dinar cashflow would have been worth only 88% of its 1998 dollar value in 1999 and only 78% in 2000. If such a project had constant USD debt service commitments valued at 100% of the 1998 dollar value for the 15 years from 1998 to 2013, the depreciation would result in an inability to fully service the debt, amounting to a total shortfall of 20% of the original principal (in present value terms at financial close), or two years worth of debt service.
+
+Looking instead at $X_{i,t}$, we see that a project with inflation adjusted cashflows in Dinar would have also been in the red between 1998 and 2006, when the dollar value of its revenue stayed below the level at which the debt was sized. Discounted back to financial close, that run of shortfalls is worth 7% of the debt stock: the red area in the chart. Between 2002 and 2013, however, inflation outpaced depreciation and $X_{i,t}$ recovered, so that from 2006 onwards the project ran a surplus worth 11% of the debt stock: the green area.
+
+While the green area is greater than the red area, from the point of view of the project the later gain is discounted more than the earlier loss. At the 5% discount rate used in the calculation the 11% gain is actually closer to a 7% gain in present value terms comparable to the loss, so that the gain almost exactly compensates for the shortfall. The cumulative currency and price movements had no overall impact on the project's ability to service its debt.
+
+The depreciation episode is one of liquidity rather than solvency. 
+
+
+## Solvency and liquidity
+
+As the example of Algeria illustrates, for a project with inflation indexed local currency revenue and and hard currency debt service, the risk implied by the currency mismatch has two components: it is a long position on local inflation and a short position on appreciation of the dollar. In the example inflation eventually comes in to compensate of an appreciation of the dollar. Macroeconomic theory predicts such compensatory movements over time and, as we shall see below, this is what happens more often than not in the historical macroeconomic series in Africa.
+
+The eventual rebalancing of $X$ through the inflation-exchange-rate dynamics ensures the long run solvency of a Dinar project in the 1998-2013 sample. However, such a project would still run into liquidity issues quite soon, as illustrated by the red area in the chart. Unless lender and borrower had accounted for a DSCR in excess of 150% along with a significant reserve account, standard debt covenants would put such a project into technical default by the 4th or 5th year of debt service. 
+
+An emergency liquidity line to the borrower in hard currency could avert such a technical default and the consequent refinancing. Provided sufficient certainty in the eventual rebalancing of $X$ ensuring solvency of the debtor, such an emergency liquidity line can be provided quite cheaply by an entity with sufficiently patient capital (and solvency buffer). The proposal below does just that.
+
+## The emergency liquidity facility
+
+Let the **Facility** offer cover that, in return for an annual premium, supplies emergency liquidity to a project with hard currency debt when the currency moves against it. In the insurance register the Facility is the underwriter and the project the insured; in the finance register the Facility is a protection seller and the project the beneficiary, and an obligor once it has drawn. The cover has two legs, and keeping them apart is what makes it priceable:
+
+- a **liquidity leg** --- gross, reversible, paid out during the tenor, and carrying no loss content of its own;
+- a **risk leg** --- net, terminal, and where the loss actually lives.
+
+Recall that $w=(i,\underline{t})$ and $R_{w,t} = \frac{X_{i,t}}{X_{i,\underline{t}}} - 1$, and consider again a project with inflation indexed local currency revenues, constant hard currency debt service and $DSCR_t = 1$ for the entire repayment period.
+
+**The liquidity leg.** The condition $R_{w,t}<0$ is the **drawing trigger**: whenever a devaluation puts the dollar value of revenue below its level at financial close, the Facility **advances** $\bar\delta \cdot|R_{w,t}|$ and the project meets its debt service in full. The trigger is a currency movement and not a default --- nothing in the structure is a credit event, and the lender continues to see a performing loan. Whenever $R_{w,t}>0$, the project pays the surplus into an interest-bearing USD **experience account**: a pledged reserve, in the finance register, whose running balance stands against the drawings outstanding.
+
+Recalling the Algerian currency and price movements, the Facility would have made drawings worth 7% of the original loan between 1998 and 2006, and the experience account would have taken in 11% between 2006 and 2013 (the red and green areas in the chart, each valued at the start of its own segment).
+
+**The risk leg.** At maturity $\bar{t}$ the position is **commuted**: the two sides settle net once and all obligations are extinguished. A positive experience account balance is returned to the project; a negative one --- drawings that the later surpluses did not repay --- is borne by the Facility. Drawings are therefore repayable solely out of subsequent favourable movements: limited recourse during the tenor, non-recourse at maturity. The balance in the experience account is the project's money throughout, which is what makes this cover an option rather than a swap --- the project keeps its upside and the Facility is left with the downside alone.
+
+**Equivalently, an Asian put.** The structure of the risk has an exact counterpart in derivatives. What the Facility owes at commutation turns not on where $X$ ends up but on its average level over the tenor, $\bar{X}_{w}$, and it owes anything at all only if that average falls short of the level at financial close:
+$$
+\text{payoff} \;=\; \frac{D}{X_{i,\underline{t}}}\,\max\big(X_{i,\underline{t}}-\bar{X}_{w},\,0\big) .
+$$
+That is the payoff of an arithmetic average-rate put --- an Asian put --- and the Facility is short it. The underlying is $X$, the dollar unit-revenue index. The strike is $X_{i,\underline{t}}$, its level at close, so the option is struck at the money spot, which is also the reference level for the facility. The fixings are the annual observations of $X$ over the tenor, the averaging weights are the discount factors, so that early years count for more than late ones, and the notional is the debt stock. The reading is useful because averaging is what makes Asian options cheap --- an average moves far less than the endpoint it averages over --- so cover written on the whole path costs materially less than cover on the terminal level of $X$ alone. Since we are working with a reverting series $X$, rather than a nominal exchange rate as is usually the case for Asian puts, the expected losses we compute below based on the realised historical distributions are significantly lower than what the derivative prices at.
+
+Look at the path of $X$ in Nigeria to understand the loss profile of such cover.
+
+In the graph below we trace all 15-year windows in the Nigerian data with a horizontal line starting at the value of $X$ at the window starting point.
+
+Whenever $X$ is below a window's line, as it is between 1985 and 1993 for the window starting at 1985, a project servicing debt during that window is short of dollars and draws on the Facility. Whenever $X$ is above a window's line, as it is between 1993 and 1999 for the same window starting at 1985, the project runs a dollar surplus and pays into the experience account. The cumulative discounted area between the line and $X$ is the discounted loan life P&L over the 15-year window; normalised by the annuity factor, it is the net cover balance. If it is negative, the commutation leaves the Facility with a loss and we have drawn the horizontal line in red. If it is positive, no loss arises, the balance is commuted back to the project, and the horizontal line is painted in green.
+
+The lines are drawn in increasingly darker shades, with a dot in the same shade painted on $X$ at the end of the 15-year window.
+
+Underneath the time series, underneath the dot representing the end of the 15-year window, we plot $V_w$, the net cover balance, measured in present value terms at the beginning of the window.
+
+Between 1985 and 2024 there are 25 15-year windows. Of those, 21 had a positive terminal value, ranging from 19% to 150% of the debt stock. Four windows, those immediately preceding the 1999 abandonment of the dollar peg and subsequent devaluation, had negative terminal values, the largest reaching 59% of the project debt stock.
+
+```{python}
+#| label: fig-windows-nga
+#| fig-cap: 'Nigeria: X (indexed to first year) with every rolling 15-year window''s start level and its terminal residual, green = gain, red = loss, shaded by window start.'
+#| execution: {iopub.execute_input: '2026-09-17T07:26:25.660887Z', iopub.status.busy: '2026-09-17T07:26:25.660887Z', iopub.status.idle: '2026-09-17T07:26:26.463507Z', shell.execute_reply: '2026-09-17T07:26:26.462358Z'}
+# Ported from wdi_hybrid_analysis.ipynb, cell 6 (styled windows chart).
+# --- Redesigned colored-windows chart (new version, for comparison with the cell above) ---
+# Color = green (gain) / red (loss) with a light->dark shade by window start within each hue,
+# used identically on each window's horizontal start-level marker, its end dot on the X line,
+# and its residual bar below. No gridlines; a yearly x-axis (rotated -60) labelled on the
+# bottom panel only; the dashed-100 (top) and zero (bottom) reference lines are the anchors.
+# Local to this chart only. Must NOT be called `start_year`: that name is the
+# global sample start (1995) used by the pooled residuals in @sec-results and
+# by the indexation tables, and rebinding it here silently re-based the whole
+# paper to 1980 on any top-to-bottom run.
+windows_chart_start = 1980
+
+
+def _ramp(t, light, dark):
+    """Hex color interpolated between `light` (t=0) and `dark` (t=1) in RGB."""
+    lo = tuple(int(light[i:i + 2], 16) for i in (1, 3, 5))
+    hi = tuple(int(dark[i:i + 2], 16) for i in (1, 3, 5))
+    return '#%02x%02x%02x' % tuple(round(a + (b - a) * t) for a, b in zip(lo, hi))
+
+
+def country_windows_styled(iso3, years=window_length, discount_rate=discount_rate,
+                           step=1, first_start=windows_chart_start, ypad_frac=0.05):
+    res = compute_terminal_residuals_wdi(
+        df[df['iso3'] == iso3], years=years, discount_rate=discount_rate,
+        window_mode="rolling", col="X", start_year=first_start).reset_index(drop=True)
+    if step > 1:  # thin the rolling windows out if requested
+        res = res[(res['window_start'] - res['window_start'].min()) % step == 0].reset_index(drop=True)
+
+    g = (df[(df['iso3'] == iso3) & (df['year'] >= first_start)]
+         .dropna(subset=['X']).sort_values('year'))
+    country_name = g['country'].iloc[0]
+    x0 = float(g['X'].iloc[0])
+    base_year, last_year = int(g['year'].iloc[0]), int(g['year'].max())
+
+    g = g.assign(idx=g['X'] / x0 * 100.0)            # index = 100 in the first year
+    idx_by_year = dict(zip(g['year'], g['idx']))
+
+    # bivariate color: hue = sign of residual (green gain / red loss); within each hue,
+    # lightness ranks the window by start date (light = earliest of that colour -> dark =
+    # latest). Normalising per colour (not over all windows) keeps the gradient visible even
+    # when one colour has only a few, tightly-clustered windows (e.g. a handful of late losses).
+    s = res['window_start']
+    sign_pos = res['V'] >= 0
+
+    def _shade(mask):
+        sub = s[mask]
+        if len(sub) == 0:
+            return {}
+        lo, sp = sub.min(), max(int(sub.max() - sub.min()), 1)
+        return {int(ws): 0.25 + 0.6 * (ws - lo) / sp for ws in sub}
+
+    gt, lt = _shade(sign_pos), _shade(~sign_pos)
+    fills = [
+        _ramp(gt[int(ws)], '#bae4b3', '#005a32') if resid >= 0
+        else _ramp(lt[int(ws)], '#fcae91', '#a50f15')
+        for ws, resid in zip(s, res['V'])
+    ]
+
+    wins = res.assign(
+        residual=res['V'],
+        start_idx=res['baseline'] / x0 * 100.0,
+        end_idx=res['window_end'].map(idx_by_year),
+        fill=fills)
+
+    xscale = alt.Scale(domain=[base_year, last_year + 1])
+    ypad = ypad_frac * (g['idx'].max() - g['idx'].min())
+    yscale = alt.Scale(domain=[g['idx'].min() - ypad, g['idx'].max() + ypad],
+                       zero=False, nice=False)
+    year_vals = list(range(base_year, last_year + 1))
+    fill_enc = alt.Color('fill:N', scale=None)
+    tip = ['window_start', 'window_end', alt.Tooltip('residual:Q', format='+.4f')]
+
+    # Layers share a scale per channel, so every layer must carry the SAME axis spec:
+    # axis=None on any layer drops the guide, and differing fields with default titles make
+    # Vega blank the title -- so define each axis once and reuse it everywhere.
+    top_x = alt.Axis(values=year_vals, labels=False, ticks=True, title=None)  # ticks only
+    top_y = alt.Axis(title=f'X index (=100 in {base_year})')
+    bot_x = alt.Axis(values=year_vals, labelAngle=-60, format='d', title='year window ends')
+    bot_y = alt.Axis(title='terminal residual / debt stock')
+
+    # --- top panel: X index, window start-level markers + end dots (full-opacity so their
+    #     gradient matches the residual bars below) ---
+    ref100 = alt.Chart(pd.DataFrame({'y': [100]})).mark_rule(
+        color='#bbb', strokeDash=[4, 4]).encode(y=alt.Y('y:Q', scale=yscale, axis=top_y))
+    segs = alt.Chart(wins).mark_rule(strokeWidth=3).encode(
+        x=alt.X('window_start:Q', scale=xscale, axis=top_x), x2='window_end:Q',
+        y=alt.Y('start_idx:Q', scale=yscale, axis=top_y), color=fill_enc, tooltip=tip)
+    hline = alt.Chart(g).mark_line(color='#222', strokeWidth=2).encode(
+        x=alt.X('year:Q', scale=xscale, axis=top_x),
+        y=alt.Y('idx:Q', scale=yscale, axis=top_y),
+        tooltip=['year', alt.Tooltip('idx:Q', format='.1f')])
+    dots = alt.Chart(wins).mark_point(filled=True, size=45).encode(
+        x=alt.X('window_end:Q', scale=xscale, axis=top_x),
+        y=alt.Y('end_idx:Q', scale=yscale, axis=top_y), color=fill_enc, tooltip=tip)
+    top = (ref100 + segs + hline + dots).properties(
+        width=550, height=300,
+        title=alt.TitleParams(
+            f"{country_name}: dollar unit-revenue index X (=100 in {base_year})",
+            subtitle=["horizontal bar = each 15-yr window's start level, dot = where X ends;",
+                      "green = gain, red = loss (darker = later window)"],
+            anchor='start'))
+
+    # --- bottom panel: terminal residual per window, at window end ---
+    zero = alt.Chart(pd.DataFrame({'y': [0]})).mark_rule(color='#888').encode(
+        y=alt.Y('y:Q', axis=bot_y))
+    bars = alt.Chart(wins).mark_bar(width=10).encode(
+        x=alt.X('window_end:Q', scale=xscale, axis=bot_x),
+        y=alt.Y('residual:Q', axis=bot_y), color=fill_enc, tooltip=tip)
+    bottom = (zero + bars).properties(width=550, height=160)
+
+    return (alt.vconcat(top, bottom).resolve_scale(x='shared')
+            .configure_view(strokeWidth=0)
+            .configure_axis(grid=False, domainColor='#888', tickColor='#888'))
+
+
+country_windows_styled('NGA')
+```
+
+```{python}
+#| execution: {iopub.execute_input: '2026-09-17T07:26:26.465126Z', iopub.status.busy: '2026-09-17T07:26:26.465126Z', iopub.status.idle: '2026-09-17T07:26:26.468793Z', shell.execute_reply: '2026-09-17T07:26:26.468793Z'}
+# res = compute_terminal_residuals_wdi(
+#     df[df['iso3'] == "NGA"], years=window_length, discount_rate=discount_rate,
+#     window_mode="rolling", col="X", start_year=1985).reset_index(drop=True)
+# res["V"].loc[10:13].sum()/len(res)
+# res["V"]
+```
+
+## The actuarially fair premium
+
+When $V_w \geq 0$ the experience account has repaid every drawing and the commutation returns the remainder to the project, so the Facility keeps nothing. Its loss on a window $w=(i,\underline{t})$ against debt $D$ --- the **ultimate net loss**, or terminal shortfall --- is the loan life P&L truncated at zero:
+$$
+L_w \;=\; D \cdot \max(-V_w,0)
+$$
+It can only be positive: the Facility absorbs the whole of every negative net cover balance (the 4 red windows in the Nigerian data) and takes nothing from the 21 positive ones.
+
+The **pure premium** over a pool of windows $\mathcal{W}$ is the expected ultimate net loss over that pool,
+$$
+\mathbb{E}[L_w] = \mathbb{E}\big[D_w \cdot \max(-V_w,0)\big]
+$$
+Assuming that a similar amount of debt $D_w$ is covered in each window, it is estimated by the sample mean over the pool, with $N=\vert\mathcal{W}\vert$,
+$$
+\mathbb{E}_N[L_w] = \frac{D}{N}\sum_{w\in\mathcal{W}} \max(-V_w,0)
+$$
+
+The actuarially fair **level annual premium** --- the running fee the project pays for the cover --- is the annuity equivalent of that loss. Expressed as a fraction of the annuity paid as debt service, it is
+$$
+\Psi = \frac{\mathbb{E}_N[L_w]}{\bar\delta\cdot A_{n,\rho}} = \frac{D}{\bar\delta\cdot A_{n,\rho}} \frac{1}{N}\sum_{w\in\mathcal{W}} \max(-V_w,0) = \frac{1}{N}\sum_{w\in\mathcal{W}} \max(-V_w,0)
+$$
+The debt stock in the numerator cancels against annual debt service times the annuity factor in the denominator, so $\Psi$ is simply the average over the pool of the negative net cover balances, counting the positive ones as zero.
+
+Going back up to the Nigerian data, and taking a simple average over the historical windows as an indication of future losses, the level annual premium is the sum of the 4 red bars divided by 25, the number of windows in the sample, which yields $\Psi = 6.9\%$. A Nigerian project buying cover priced off a purely Nigerian pool would pay 6.9% on top of each of its debt service payments.
+
+## The equivalent interest rate spread
+
+The pure premium is the natural quotation for an underwriter, but an investor prices a margin, and the same expected loss can be quoted differently.
+
+level annual premium as a share of each debt service payment, $\Psi = 6.9\%$, is equally the present value of the expected ultimate net loss as a share of the principal --- dividing a present value by $\bar\delta A_{n,\rho}$ and dividing it by $D$ are the same operation.
+
+By expressing annual payment as a share of the *original principal*, one gets a yearly quantity with a debt stock as the numerator:
+
+$$
+\frac{\Psi\,\bar\delta}{D} \;=\; \frac{\Psi}{A_{n,\rho}} \;=\; 0.67\% \text{ per year for Nigeria,}
+$$
+
+**but this is not the equivalent interest-rate spread, except on a bullet loan.**
+
+On an annuity-amortising loan a margin accrues on the declining outstanding balance --- which averages just under 60% of the original principal over a 15-year tenor --- so the **spread**, or margin add-on, $\Delta r$ comes out about half as large again: 101bp for Nigeria against the 67bp above. It is computed exactly by treating the expected loss as additional principal and solving
+
+$$
+A_{n,\;\rho+\Delta r} \;=\; \frac{A_{n,\rho}}{1 + \Psi} .
+$$
+
+Underwriters quote the pure premium as a share of the covered exposure (debt service), and the margin-equivalent spread $\Delta r$ to investors. All three Nigerian figures here come from the 25-window sample opened in 1985 above
+
+## The cost of cover for the whole African pool
+
+The Nigerian pool is one country's worth of history. Widening $\mathcal{W}$ to every African country in the WDI panel gives $N = 1{,}055$ rolling 15-year windows across 50 countries, with financial close in every year from 1985 to 2009 (Lesotho excluded for uncorrected CPI basket breaks). Each window contributes one net cover balance $V_w$, the terminal balance of the cover account as a fraction of principal; @fig-pool-balance plots their distribution. Like the Nigerian figures above, this pool opens in 1985 and is not the 1995-start pool that the later sections of the draft use.
+
+Two features of that distribution do the work.
+
+First, **it is centred well to the right of zero**: $\mathbb{E}_N[V_w] = +0.22$ and the median window ends at $+0.18$. Over 15 years the typical African project's inflation-indexed dollar revenue does not merely keep up with its close-year level, it ends ahead of it by around a fifth of the debt stock in present value.
+
+Second, **the left tail is thin but real**: 26% of windows end below zero, $\mathbb{E}_N[V_w \mid V_w<0] = -0.15$, and the worst single window in forty years of African data (Sudan, close 1991) ends at $-0.75$.
+
+Applying the pricing formula of the previous section to this pool gives a level annual premium of
+
+$$
+\Psi \;=\; \mathbb{E}_N\big[\max(-V_w,0)\big] \;=\; \frac{1}{N}\sum_{w\in\mathcal{W}} \max(-V_w,0) \;=\; 4.0\% ,
+$$
+
+which is quoted on the three bases of the previous section as:
+
+| Quote | Value | Read as |
+|---|---|---|
+| $\Psi$, share of each debt-service payment | **4.0%** | the underwriter's quote, and equally the PV of the expected ultimate net loss as a share of principal |
+| $\Psi/A_{n,\rho}$, flat annual payment, share of original principal | **38 bp** | a fee on the face of the loan, correct only for a bullet |
+| $\Delta r$, margin-equivalent spread | **58 bp** | the investor-facing number, on a 15-year annuity-amortising loan |
+
+As in the Nigerian case, the spread exceeds the flat fee because a margin accrues on a balance that amortises to zero, averaging just under 60% of the original principal over the tenor.
+
+**Where the affordability comes from.** Repricing the same 1,055 windows on the real exchange rate $Q_{i,t}=X_{i,t}/P^{*}_{t}$ instead of on $X$ gives $\Psi = 9.9\%$ and $\Delta r = 144$bp, with $\mathbb{E}_N[V_w] = +0.02$, a median of $-0.02$, and 53% of windows ending below zero. On the real rate alone, in other words, the cover is close to a fair bet: real appreciation and real depreciation are roughly equally likely over a 15-year horizon, which is the mean reversion the instrument relies on. The gap between 144bp and 58bp is the US price level. Since $X = Q\,P^{*}$ and $P^{*}$ rises about 45% over a 15-year window (2.5% a year), while the covered liability is *fixed in nominal dollars*, that drift accrues to the project. The cover is affordable for both reasons at once: the real rate mean-reverts within the tenor, and the debt service it protects does not index to anything.
+
+**Liquidity is not solvency.** The gap between how often the Facility *lends* and how often it *loses* is the entire economics of the instrument. $X$ falls below its close-year level at some point in 67% of windows, and where it does it stays there for 6.9 of the 15 years on average. But only 26% of windows end with the cover account short. The Facility is, most of the time, a bridge that is repaid out of the later surplus, and it is priced on the residue rather than on the gross flow.
+
+```{python}
+#| include: false
+#| execution: {iopub.execute_input: '2026-09-17T07:26:26.470034Z', iopub.status.busy: '2026-09-17T07:26:26.470034Z', iopub.status.idle: '2026-09-17T07:26:27.191270Z', shell.execute_reply: '2026-09-17T07:26:27.191270Z'}
+# Pooled and country-level cost of cover.
+#
+# Same machinery as the Nigerian panel above, applied to every country rather
+# than NGA alone: compute_terminal_residuals_wdi() over the whole frame, on X,
+# with the window convention of @sec-method (n+1 observations, n fixings).
+# Opens in 1985, like the Nigerian example, NOT at the global `start_year`
+# (1995) that @sec-results and the indexation tables use -- hence the local
+# names below, which must not collide with `residuals` / `by_country` there.
+# `equivalent_rate` is the one defined in the setup cell at the top.
+pool_start_year = 1985
+
+
+def window_drawings(data, years=window_length, col="X", start_year=pool_start_year):
+    """Per window: does the Facility ever advance, and in how many years?
+
+    Counts fixings with R_{w,t} < 0, i.e. years in which the project falls short
+    of its close-year dollar cash flow. This is the *liquidity* side of the
+    instrument, as distinct from the terminal balance V_w, its *solvency* side.
+    Windows are built exactly as in compute_terminal_residuals_wdi: n+1
+    observations, of which the close year sets the strike and the n that follow
+    are the fixings.
+    """
+    data = data[data["year"] >= start_year]
+    n_obs = years + 1
+    rows = []
+    for iso3, g in data.dropna(subset=[col]).groupby("iso3"):
+        g = g.sort_values("year").reset_index(drop=True)
+        for i0 in range(0, len(g) - n_obs + 1):
+            win = g.iloc[i0:i0 + n_obs]
+            if win[col].isna().any():
+                continue
+            R_wt = win[col].to_numpy()[1:] / float(win[col].iloc[0]) - 1.0
+            rows.append({"iso3": iso3, "window_start": int(win["year"].iloc[0]),
+                         "any_draw": bool((R_wt < 0).any()),
+                         "n_draw_years": int((R_wt < 0).sum()),
+                         "worst_year": float(R_wt.min())})
+    return pd.DataFrame(rows)
+
+
+pool_res = compute_terminal_residuals_wdi(
+    df, years=window_length, discount_rate=discount_rate,
+    window_mode="rolling", col="X", start_year=pool_start_year)
+
+psi_pool = -pool_res["loss"].mean()          # E_N[max(-V_w, 0)], share of debt service
+psi_debt = psi_pool / annuity_factor         # flat annual payment, share of principal
+dr_pool = equivalent_rate(psi_pool, discount_rate=discount_rate,
+                          years=window_length) - discount_rate
+p_loss = (pool_res["V"] < 0).mean()
+
+worst = pool_res.loc[pool_res["V"].idxmin()]
+print(f"Pool: N = {len(pool_res)} windows, {pool_res['iso3'].nunique()} countries, "
+      f"closes {pool_res['window_start'].min()}-{pool_res['window_start'].max()}")
+print(f"E_N[V] = {pool_res['V'].mean():+.4f}   median V = {pool_res['V'].median():+.4f}   "
+      f"worst = {worst['V']:+.4f} ({worst['country']} {worst['window_start']}-{worst['window_end']})")
+print(f"P(V < 0) = {p_loss:.3f}   E_N[V | V < 0] = {pool_res.loc[pool_res['V'] < 0, 'V'].mean():.4f}")
+print(f"Psi = {psi_pool:.4f} of debt service;  Psi/A = {psi_debt * 1e4:.0f}bp of principal;  "
+      f"delta_r = {dr_pool * 1e4:.0f}bp")
+
+# Where the affordability comes from: the same windows priced on the real
+# exchange rate Q = X / P*, which strips out the US price level. X is the
+# priced object (the liability is nominal USD); Q isolates the real bet.
+pool_res_q = compute_terminal_residuals_wdi(
+    df, years=window_length, discount_rate=discount_rate,
+    window_mode="rolling", col="Q", start_year=pool_start_year)
+psi_pool_q = -pool_res_q["loss"].mean()
+dr_pool_q = equivalent_rate(psi_pool_q, discount_rate=discount_rate,
+                            years=window_length) - discount_rate
+print(f"On Q instead of X: E_N[V] = {pool_res_q['V'].mean():+.4f}, "
+      f"median {pool_res_q['V'].median():+.4f}, P(V<0) = {(pool_res_q['V'] < 0).mean():.3f}, "
+      f"Psi = {psi_pool_q:.4f}, delta_r = {dr_pool_q * 1e4:.0f}bp")
+
+# Liquidity side: how often, and for how long, the Facility is actually lending.
+pool_draws = window_drawings(df)
+print(f"windows with any drawing = {pool_draws['any_draw'].mean():.3f}; "
+      f"drawing years = {pool_draws['n_draw_years'].mean():.1f} of {window_length} on average, "
+      f"{pool_draws.loc[pool_draws['any_draw'], 'n_draw_years'].mean():.1f} among windows that draw")
+
+# --- country by country, on three sample starts (the panels of @fig-country-spread).
+# The premium is priced on each country's own windows; the later the start, the
+# fewer windows per country (25 / 20 / 15) and the fewer crisis episodes in them.
+panel_starts = (1985, 1990, 1995)
+
+
+def country_spreads(start_year):
+    """Country-level premium and margin-equivalent spread for one sample start.
+
+    Carries the pool-level figures for that start along on every row, so a
+    facet/panel can label itself without a second lookup.
+    """
+    res = compute_terminal_residuals_wdi(
+        df, years=window_length, discount_rate=discount_rate,
+        window_mode="rolling", col="X", start_year=start_year)
+    bc = (res.groupby(["iso3", "country"], as_index=False)
+             .agg(expected_loss=("loss", "mean"),
+                  prob_loss=("V", lambda s: (s < 0).mean()),
+                  mean_V=("V", "mean"),
+                  n_windows=("V", "size")))
+    bc["psi"] = -bc["expected_loss"]
+    bc["psi_debt"] = bc["psi"] / annuity_factor
+    bc["rate_increase"] = bc["psi"].apply(
+        lambda p: equivalent_rate(p, discount_rate=discount_rate, years=window_length) - discount_rate)
+    psi_p = -res["loss"].mean()
+    bc["start"] = start_year
+    bc["n_pool"] = len(res)
+    bc["pooled"] = equivalent_rate(psi_p, discount_rate=discount_rate,
+                                   years=window_length) - discount_rate
+    return bc.sort_values("rate_increase", ascending=False).reset_index(drop=True)
+
+
+spreads = pd.concat([country_spreads(y) for y in panel_starts], ignore_index=True)
+pool_by_country = spreads[spreads["start"] == pool_start_year].reset_index(drop=True)
+
+print()
+print("sample-start sensitivity of the country spreads:")
+for y in panel_starts:
+    s = spreads[spreads["start"] == y]
+    print(f"  from {y}: N = {int(s['n_pool'].iloc[0])} windows, {int(s['n_windows'].max())} per country; "
+          f"pooled {s['pooled'].iloc[0] * 1e4:.0f}bp; country median {s['rate_increase'].median() * 1e4:.0f}bp, "
+          f"mean {s['rate_increase'].mean() * 1e4:.0f}bp, max {s['rate_increase'].max() * 1e4:.0f}bp "
+          f"({s.loc[s['rate_increase'].idxmax(), 'country']}); "
+          f"{(s['psi'] == 0).sum()} at zero; {(s['rate_increase'] < 0.005).mean():.0%} below 50bp")
+
+print()
+print(f"country delta_r: median {pool_by_country['rate_increase'].median() * 1e4:.0f}bp, "
+      f"mean {pool_by_country['rate_increase'].mean() * 1e4:.0f}bp, "
+      f"pooled {dr_pool * 1e4:.0f}bp, "
+      f"share below 50bp {(pool_by_country['rate_increase'] < 0.005).mean():.0%}")
+print(f"{(pool_by_country['psi'] == 0).sum()} of {len(pool_by_country)} countries never end a "
+      f"window in the red: {', '.join(pool_by_country.loc[pool_by_country['psi'] == 0, 'country'])}")
+print(f"{(pool_by_country['n_windows'] == 25).sum()} countries have the full 25 windows")
+print(pool_by_country[["country", "n_windows", "prob_loss", "mean_V", "psi", "rate_increase"]]
+      .to_string(index=False,
+                 formatters={"prob_loss": "{:.0%}".format, "mean_V": "{:+.3f}".format,
+                             "psi": "{:.4f}".format, "rate_increase": "{:.4%}".format}))
+```
+
+```{python}
+#| label: fig-pool-balance
+#| fig-cap: 'Net cover balance $V_w$ at maturity, every rolling 15-year window in the pool (50 countries, closes 1985-2009). Blue: the cover account ends in surplus and the Facility is repaid in full. Red: the account ends short, and the average depth of that red mass is the premium.'
+#| execution: {iopub.execute_input: '2026-09-17T07:26:27.193389Z', iopub.status.busy: '2026-09-17T07:26:27.193389Z', iopub.status.idle: '2026-09-17T07:26:27.983307Z', shell.execute_reply: '2026-09-17T07:26:27.983307Z'}
+mean_rule = alt.Chart(pd.DataFrame({"V": [pool_res["V"].mean()]})).mark_rule(
+    color="#333", strokeDash=[6, 4], strokeWidth=2).encode(x=alt.X("V:Q"))
+
+hist = alt.Chart(pool_res).mark_bar().encode(
+    x=alt.X("V:Q", bin=alt.Bin(maxbins=40),
+            title="V_w  (net cover balance at maturity, fraction of principal)"),
+    y=alt.Y("count():Q", title=f"Number of {window_length}-year windows"),
+    color=alt.condition(alt.datum.V < 0, alt.value("crimson"), alt.value("steelblue")),
+    tooltip=[alt.Tooltip("count():Q", title="windows")],
+)
+
+(hist + mean_rule).properties(
+    width=575, height=340,
+    title=alt.TitleParams(
+        f"Terminal balance across the pool (N={len(pool_res)} windows, "
+        f"{pool_res['iso3'].nunique()} countries, closes from {pool_start_year})",
+        subtitle=[f"P(loss) = {p_loss:.0%};  mean = {pool_res['V'].mean():+.2f} (dashed);  "
+                  f"premium = {psi_pool:.1%} of debt service = {dr_pool * 1e4:.0f}bp on the margin"],
+        anchor="start"),
+)
+```
+
+## Country by country
+
+Pooling is a pricing choice, not a fact about the risk. @fig-country-spread prices the same cover on each country's own windows and quotes the margin-equivalent spread $\Delta r$, the number an investor in that country would see. The top panel is the 1985 pool used above — 25 windows per country wherever the WDI series runs unbroken, fewer where it does not; the two below it repeat the exercise on samples opening in 1990 and 1995, with countries held in the 1985 order and the axes shared, so a column is one country priced on three samples.
+
+Take the 1985 panel first. The dispersion is wide and the distribution is skewed. The median African country prices at **40bp** and 58% of countries sit below 50bp, but Libya (274bp), the Democratic Republic of Congo (189bp), Ethiopia (142bp), Algeria (142bp) and The Gambia (131bp) sit far out in the right tail. At the other end, eight countries — Egypt, Comoros, Guinea, Kenya, Liberia, Mauritius, Namibia and South Sudan — have no window since 1985 that ends below its close-year level at all, so their pure premium is exactly zero. Nigeria, the case traced above, prices at 101bp.
+
+The lower panels show how much of that price is a statement about which episodes the sample contains. Moving the start to 1990 barely touches the pool (58bp to 55bp) but thins the middle of the distribution: the median country falls to 31bp and ten countries price at zero. Moving it to 1995 halves the pool to 30bp, takes the median country to 8bp, and leaves thirteen countries at zero — by then the sample has dropped the 1994 CFA devaluation and the worst of the Sudanese and Congolese episodes, and the cost is concentrated in a handful of names. What survives every cut is the shape: the same few countries stay in the tail — Libya prices between 274bp and 340bp on all three samples — while the majority of the continent prices in tens of basis points. The pooled number is the fragile part; the ranking is not.
+
+The pooled 58bp is not a diversification gain over these country numbers. Expected loss is linear in the pool, so pooling can only *average*: the pooled figure differs from the unweighted country mean of 53bp merely because countries contribute unequal numbers of windows. What pooling buys sits on the capital side rather than the premium side — the variance of the Facility's aggregate outcome falls with the number of imperfectly correlated exposures, and that is what sizes the capital standing behind the promise, not its price.
+
+A single pooled price is therefore a cross-subsidy from the Kenyas to the Libyas, and one that sponsors can see as clearly as the Facility can. That is an adverse-selection problem to be designed around — through risk-banded pricing, mandatory participation within a programme, or a deliberate decision to subsidise the tail — rather than an artefact to be averaged away. The policy discussion later in the draft returns to it.
+
+```{python}
+#| label: fig-country-spread
+#| fig-cap: 'Cover priced country by country, on three sample starts: the margin-equivalent spread $\Delta r$ on a 15-year annuity-amortising loan at 5%. Countries keep the 1985 ordering in all three panels, and the axes are shared, so a column is one country''s price on three samples. Dashed line: the pooled premium of that panel; red bars price above it.'
+#| execution: {iopub.execute_input: '2026-09-17T07:26:27.986027Z', iopub.status.busy: '2026-09-17T07:26:27.986027Z', iopub.status.idle: '2026-09-17T07:26:29.467563Z', shell.execute_reply: '2026-09-17T07:26:29.467563Z'}
+country_order = (spreads[spreads["start"] == panel_starts[0]]
+                 .sort_values("rate_increase", ascending=False)["country"].tolist())
+country_order += [c for c in spreads["country"].unique() if c not in country_order]
+
+# Shared scales, set once and reused by every layer of every panel: a column is
+# then the same country throughout, and bar heights are comparable down the stack.
+xscale = alt.Scale(domain=country_order)
+yscale = alt.Scale(domain=[0, spreads["rate_increase"].max() * 1.06])
+y_axis = alt.Axis(format=".1%", title="Δr  (margin-equivalent spread)")
+tip = ["country", alt.Tooltip("start:O", title="closes from"),
+       alt.Tooltip("rate_increase:Q", title="delta r", format=".2%"),
+       alt.Tooltip("psi:Q", title="premium (share of debt service)", format=".2%"),
+       alt.Tooltip("prob_loss:Q", title="P(loss)", format=".0%"),
+       alt.Tooltip("mean_V:Q", title="mean V", format="+.3f"),
+       "n_windows"]
+
+
+def spread_panel(start, show_x):
+    d = spreads[spreads["start"] == start]
+    pooled = float(d["pooled"].iloc[0])
+    # Fifty countries in 565pt: the labels need the smaller font, and
+    # labelOverlap=False stops Vega-Lite thinning them out silently.
+    x_axis = (alt.Axis(labelAngle=-60, labelFontSize=7, labelOverlap=False, title=None) if show_x
+              else alt.Axis(labels=False, ticks=False, title=None))
+    bars = alt.Chart(d).mark_bar().encode(
+        x=alt.X("country:N", sort=country_order, scale=xscale, axis=x_axis),
+        y=alt.Y("rate_increase:Q", scale=yscale, axis=y_axis),
+        color=alt.condition(alt.datum.rate_increase > pooled,
+                            alt.value("crimson"), alt.value("steelblue")),
+        tooltip=tip)
+    rule = alt.Chart(pd.DataFrame({"y": [pooled]})).mark_rule(
+        color="#333", strokeDash=[6, 4], strokeWidth=2).encode(
+        y=alt.Y("y:Q", scale=yscale, axis=y_axis))
+    return (bars + rule).properties(
+        width=565, height=170,
+        title=alt.TitleParams(
+            f"closes from {start}",
+            subtitle=[f"N = {int(d['n_pool'].iloc[0])} windows, up to {int(d['n_windows'].max())} "
+                      f"per country;  pooled {pooled * 1e4:.0f}bp (dashed);  "
+                      f"median country {d['rate_increase'].median() * 1e4:.0f}bp;  "
+                      f"{(d['psi'] == 0).sum()} at zero"],
+            anchor="start"))
+
+
+alt.vconcat(*[spread_panel(s, s == panel_starts[-1]) for s in panel_starts],
+            spacing=10).resolve_scale(x="shared", y="shared").properties(
+    title=alt.TitleParams("Cost of cover by country, and what the sample start does to it",
+                          anchor="start", fontSize=15))
+```
+
+## Tenor: what the horizon is worth {#sec-tenor}
+
+Tenor and cover period are the same parameter in this design: the Facility is exposed from financial close to maturity, so $n$ fixes both how long the project is insured and how long the real exchange rate has to come back. If the affordability result rests on mean reversion inside the tenor, the premium should fall in $n$. @fig-tenor shows that it does — and that two quite different things are doing the work, which have to be separated before the figure means anything.
+
+The first is the sample. With a fixed calendar window the closes run $\underline{t}=1985,\dots,2024-n$, so raising $n$ does not merely lengthen each window, it deletes the later close cohorts: at $n=25$ only the 1985–1999 closes survive, and those are the crisis-heavy vintages. A naive curve therefore moves the horizon and the set of projects at the same time. @fig-tenor controls for this with a **fixed cohort** — closes 1985–1999, the set available at every tenor on the grid, in the 43 countries whose series support $n=25$ — so that along the blue curve the horizon is the only thing that changes.
+
+The second is the unit. $\Delta r$ is a margin on an amortising loan, so the same expected loss spread over more payments is a smaller margin whatever the risk is doing. The figure therefore quotes two of the premium's units at once — $\Psi$, the actuarial quote as a share of one debt-service payment, which carries no annuity, and the margin-equivalent $\Delta r$ — and adds $P(V_w<0)$, a frequency that carries no discounting at all. (The third quote, $\Psi/A$, tracks $\Delta r$ and is in the printed table.)
+
+```{python}
+#| include: false
+#| execution: {iopub.execute_input: '2026-09-17T07:26:29.469680Z', iopub.status.busy: '2026-09-17T07:26:29.469680Z', iopub.status.idle: '2026-09-17T07:26:30.420997Z', shell.execute_reply: '2026-09-17T07:26:30.420354Z'}
+# Tenor sensitivity (@fig-tenor): the same cover repriced at tenors from 5 to 25
+# years on the 1985 pool, in the three units of @sec-instrument.
+#
+# Two samples per tenor, because a fixed calendar sample confounds the horizon
+# with the close cohort: closes run pool_start_year .. 2024 - n, so raising n
+# deletes the late vintages rather than only lengthening the windows. At n = 25
+# only the 1985-1999 closes survive, and those are the crisis-heavy ones.
+#   "all available windows" - every window at that tenor (the naive curve)
+#   "fixed cohort"          - closes 1985-1999 only (the set available at every
+#                             tenor in the grid), and only the countries whose
+#                             series support n = 25, so that the horizon is the
+#                             only thing moving along the curve.
+tenor_grid = (5, 8, 10, 12, 15, 20, 25)
+tenor_res = {n: compute_terminal_residuals_wdi(
+                 df, years=n, discount_rate=discount_rate,
+                 window_mode="rolling", col="X", start_year=pool_start_year)
+             for n in tenor_grid}
+
+cohort_last_close = int(df["year"].max()) - max(tenor_grid)
+cohort_countries = sorted(tenor_res[max(tenor_grid)]["iso3"].unique())
+cohort_label = f"fixed cohort: closes {pool_start_year}-{cohort_last_close}"
+
+tenor_rows = []
+for n in tenor_grid:
+    a_n = (1 - (1 + discount_rate) ** -n) / discount_rate
+    full = tenor_res[n]
+    cohort = full[full["iso3"].isin(cohort_countries)
+                  & (full["window_start"] <= cohort_last_close)]
+    for label, res in [("all available windows", full), (cohort_label, cohort)]:
+        psi = -res["loss"].mean()                       # share of one debt-service payment
+        tenor_rows.append({
+            "n": n,
+            "sample": label,
+            "psi_pct": 100 * psi,
+            "psi_debt_bp": 1e4 * psi / a_n,             # flat annual payment, share of principal
+            "dr_bp": 1e4 * (equivalent_rate(psi, discount_rate=discount_rate, years=n)
+                            - discount_rate),
+            "prob_loss": (res["V"] < 0).mean(),
+            "n_windows": len(res),
+            "n_countries": res["iso3"].nunique(),
+        })
+
+tenor = pd.DataFrame(tenor_rows)
+print(f"Tenor sensitivity on the {pool_start_year} pool. Fixed cohort: closes "
+      f"{pool_start_year}-{cohort_last_close} in the {len(cohort_countries)} countries "
+      f"(of {tenor_res[window_length]['iso3'].nunique()}) whose series support n = {max(tenor_grid)}.")
+print(tenor.to_string(index=False, formatters={
+    "psi_pct": "{:.2f}%".format, "psi_debt_bp": "{:.0f}bp".format,
+    "dr_bp": "{:.0f}bp".format, "prob_loss": "{:.0%}".format}))
+```
+
+```{python}
+#| label: fig-tenor
+#| fig-cap: 'Cost of cover against tenor, on the 1985 pool, in all three of the premium''s units. Grey: every window available at each tenor. Blue: the fixed cohort of closes 1985-1999, in the 43 countries whose series support $n=25$, so that the horizon is the only thing changing along the curve. Dashed rule: the 15-year base case used throughout the paper.'
+#| execution: {iopub.execute_input: '2026-09-17T07:26:30.423096Z', iopub.status.busy: '2026-09-17T07:26:30.422097Z', iopub.status.idle: '2026-09-17T07:26:31.043145Z', shell.execute_reply: '2026-09-17T07:26:31.043145Z'}
+tenor_scale = alt.Scale(domain=["all available windows", cohort_label],
+                        range=["#bbbbbb", "#4c78a8"])
+tenor_rule = alt.Chart(pd.DataFrame({"n": [window_length]})).mark_rule(
+    color="#333", strokeDash=[4, 4], strokeWidth=1).encode(x=alt.X("n:Q"))
+tenor_tip = ["sample", alt.Tooltip("n:Q", title="tenor"),
+             alt.Tooltip("dr_bp:Q", title="delta r (bp)", format=".0f"),
+             alt.Tooltip("psi_pct:Q", title="Psi (% of debt service)", format=".2f"),
+             alt.Tooltip("prob_loss:Q", title="P(V<0)", format=".0%"),
+             "n_windows", "n_countries"]
+
+
+def tenor_panel(field, axis_title, fmt, show_x):
+    """One stacked panel of @fig-tenor: the same two curves in a different unit.
+
+    Every panel carries the same legend spec rather than suppressing it on two
+    of the three: with the colour scale resolved as shared, Vega-Lite hoists one
+    legend to the concat level, and a panel that disables it kills the hoisted
+    legend for all of them.
+    """
+    x_axis = alt.Axis(values=list(tenor_grid), grid=False, labels=show_x, ticks=show_x,
+                      title="n  (tenor, and equally the cover period, in years)" if show_x else None)
+    line = alt.Chart(tenor).mark_line(point=True, strokeWidth=2).encode(
+        x=alt.X("n:Q", scale=alt.Scale(domain=[4, 26]), axis=x_axis),
+        y=alt.Y(f"{field}:Q", scale=alt.Scale(domainMin=0),
+                axis=alt.Axis(format=fmt, title=axis_title, titleFontSize=10)),
+        color=alt.Color("sample:N", scale=tenor_scale,
+                        legend=alt.Legend(title=None, orient="bottom")),
+        tooltip=tenor_tip)
+    return (tenor_rule + line).properties(width=460, height=115)
+
+
+alt.vconcat(
+    tenor_panel("dr_bp", "Δr  (bp on the margin)", ".0f", False),
+    tenor_panel("psi_pct", "Ψ  (% of one debt-service payment)", ".1f", False),
+    tenor_panel("prob_loss", "P(V < 0)", ".0%", True),
+    spacing=8,
+).resolve_scale(x="shared", color="shared").properties(
+    title=alt.TitleParams(
+        "What the tenor is worth, and in which unit",
+        subtitle=["Ψ is the actuarial quote and carries no annuity; Δr spreads it over the loan",
+                  "The grey curve also changes which close years it contains"],
+        anchor="start", fontSize=14))
+```
+
+Both curves fall, and the controlled one falls further. On the fixed cohort the margin-equivalent spread runs 242bp at a five-year tenor, 142bp at ten, 92bp at fifteen, 61bp at twenty and 44bp at twenty-five. The uncontrolled curve is flatter — 150bp to 44bp — and turns the wrong way in the bottom panel: $P(V_w<0)$ ticks up from 24% at $n=20$ to 29% at $n=25$, not because long tenors are riskier but because by then the only closes left in it are the 1985–1999 ones. Controlling the cohort strengthens the result rather than qualifying it, which is the reason to prefer it.
+
+But the decline is not all mean reversion, and the middle panel says how much of it is. In the actuarial unit the fixed-cohort premium falls from 6.8% to 4.5% of a debt-service payment between $n=5$ and $n=25$ — about a third — while $\Delta r$ falls by four-fifths over the same range. The difference is the annuity: the same expected loss spread over more payments, accruing on a balance that takes longer to amortise. On the uncontrolled sample $\Psi$ barely moves at all, from 4.2% to 4.5%, so the whole of that curve's decline in $\Delta r$ is conversion rather than risk.
+
+The claim that long tenors are cheap to cover therefore has two parts, and only one of them is about the real exchange rate. Reversion inside the window does genuine work — worth roughly a third of the premium between a five-year and a twenty-five-year horizon — and the loan's amortisation profile does the rest. The cleanest evidence for the first part is the bottom panel, where no annuity can enter: on the fixed cohort the share of windows ending in the red falls from 48% at $n=5$ to 29% at $n=25$. Time is what turns a coin toss into a one-in-three chance, and it is why this cover suits long-tenor project debt rather than working capital.
+
+## Country groupings: what a cut of the pool can and cannot show {#sec-groupings}
+
+Grouping cannot make the cover cheaper. Expectation is linear in the pool, so the pooled premium is a window-weighted average of its members and any partition of it averages back to the same number. What a grouping *can* show is two things: where the pooled price comes from, and whether the countries inside a group are one exposure or many — the second being the capital question rather than the price question. @fig-groups puts them side by side: the left panel prices the cover country by country within each group, the right reports the mean pairwise correlation of annual $\Delta\ln X$ inside it.
+
+Two cuts, both on the 1985 pool. The first is the exchange-rate regime of the setup cell. The second is monetary history: countries split at a median annual inflation of 10% over 1985–2024, which separates twelve from thirty-eight. The two are not independent — all sixteen EUR-linked countries fall in the low-inflation group, so the regime cut is partly a proxy for the monetary one — and that overlap is itself worth seeing.
+
+The sample choice matters here more than anywhere else in the paper. A 1995 start drops the 1994 CFA devaluation, which is the one episode that prices the EUR-linked group: on that sample the group costs 6bp against the floats' 44bp, and the peg reads as very nearly free cover. On the full sample it costs 49bp against 66bp. The regime result is not sample-robust in level, and stating it on the truncated sample would mean pricing CFA cover on a window that opens the year after the CFA devaluation.
+
+```{python}
+#| include: false
+#| execution: {iopub.execute_input: '2026-09-17T07:26:31.046583Z', iopub.status.busy: '2026-09-17T07:26:31.045543Z', iopub.status.idle: '2026-09-17T07:26:31.086210Z', shell.execute_reply: '2026-09-17T07:26:31.085203Z'}
+# Country groupings (@fig-groups): two cuts of the same 1985 pool, each reported
+# on both sides of the only question a grouping can answer.
+#   price   - the group's pooled premium, and the dispersion of its members
+#   capital - the mean pairwise correlation of annual d ln X within the group,
+#             i.e. whether the group is one exposure wearing several names
+# Expectation is linear in the pool, so a grouping can neither create nor
+# destroy premium (@sec-variation); it can only show where the pooled number
+# comes from, and how much of the group's risk is common.
+#
+# The cuts are run on the 1985 pool deliberately. A 1995 start drops the 1994
+# CFA devaluation, which is the one episode that prices the EUR-linked group,
+# and the regime cut then reads as though the peg were nearly free.
+median_inflation = (df.dropna(subset=["cpi"]).sort_values(["iso3", "year"])
+                      .groupby("iso3")["cpi"]
+                      .apply(lambda s: float(np.exp(np.median(np.diff(np.log(s.to_numpy())))) - 1)))
+
+group_countries = pool_by_country.copy()
+group_countries["regime"] = group_countries["iso3"].map(fx_regime).fillna("Flexible")
+group_countries["median_inflation"] = group_countries["iso3"].map(median_inflation)
+group_countries["inflation_group"] = np.where(
+    group_countries["median_inflation"] >= 0.10, "Inflation >= 10%", "Inflation < 10%")
+
+# Pairwise correlations of annual d ln X over the pool sample. min_periods keeps
+# the short series out; .dropna() would empty the frame, as country coverage differs.
+_x_wide = df[df["year"] >= pool_start_year].pivot(index="year", columns="iso3", values="X")
+dlnx_corr = np.log(_x_wide).diff().corr(min_periods=10)
+
+
+def mean_within_corr(iso_list):
+    """Mean of the upper triangle of the within-group correlation matrix."""
+    members = [c for c in iso_list if c in dlnx_corr.columns]
+    if len(members) < 2:
+        return np.nan
+    sub = dlnx_corr.loc[members, members]
+    return float(sub.where(np.triu(np.ones(sub.shape, dtype=bool), k=1)).stack().mean())
+
+
+group_rows = []
+for scheme, col in [("Exchange-rate regime", "regime"), ("Monetary history", "inflation_group")]:
+    for name, members in group_countries.groupby(col):
+        res = pool_res[pool_res["iso3"].isin(members["iso3"])]
+        psi_g = -res["loss"].mean()
+        group_rows.append({
+            "scheme": scheme,
+            "group": name,
+            "n_countries": len(members),
+            "n_windows": len(res),
+            "pooled_dr_bp": 1e4 * (equivalent_rate(psi_g, discount_rate=discount_rate,
+                                                   years=window_length) - discount_rate),
+            "prob_loss": (res["V"] < 0).mean(),
+            "median_dr_bp": 1e4 * members["rate_increase"].median(),
+            "max_dr_bp": 1e4 * members["rate_increase"].max(),
+            "worst": members.loc[members["rate_increase"].idxmax(), "country"],
+            "n_zero": int((members["psi"] == 0).sum()),
+            "mean_corr": mean_within_corr(members["iso3"].tolist()),
+        })
+groups = pd.DataFrame(group_rows)
+
+# One row per country per scheme: the dots of the left panel.
+group_points = pd.concat([
+    group_countries.assign(scheme="Exchange-rate regime", group=group_countries["regime"]),
+    group_countries.assign(scheme="Monetary history", group=group_countries["inflation_group"]),
+], ignore_index=True)
+group_points["dr_bp"] = 1e4 * group_points["rate_increase"]
+# Seeded jitter: countries pile up at exactly zero and the strip is unreadable
+# without it. Reproducible, and it only ever moves a dot off its own row's centre.
+group_points["jitter"] = np.random.default_rng(0).uniform(-0.32, 0.32, len(group_points))
+
+print(groups.to_string(index=False, formatters={
+    "pooled_dr_bp": "{:.0f}bp".format, "median_dr_bp": "{:.0f}bp".format,
+    "max_dr_bp": "{:.0f}bp".format, "prob_loss": "{:.0%}".format,
+    "mean_corr": "{:+.2f}".format}))
+print(f"\nAll Africa: pooled {dr_pool * 1e4:.0f}bp, median country "
+      f"{pool_by_country['rate_increase'].median() * 1e4:.0f}bp, "
+      f"mean pairwise correlation {mean_within_corr(pool_by_country['iso3'].tolist()):+.2f}")
+print("\nregime against inflation group:")
+print(pd.crosstab(group_countries["regime"], group_countries["inflation_group"]).to_string())
+```
+
+```{python}
+#| label: fig-groups
+#| fig-cap: 'Two groupings of the 1985 pool, priced and correlated. Left: every country''s margin-equivalent spread $\Delta r$ (dots, jittered vertically; square-root axis so that the countries at zero and Libya at 274bp are both legible), the group''s pooled price (black tick) and the all-Africa pooled price (dashed rule). Right: mean pairwise correlation of annual $\Delta \ln X$ within the group - the capital side of the same cut.'
+#| execution: {iopub.execute_input: '2026-09-17T07:26:31.088036Z', iopub.status.busy: '2026-09-17T07:26:31.088036Z', iopub.status.idle: '2026-09-17T07:26:31.722920Z', shell.execute_reply: '2026-09-17T07:26:31.722920Z'}
+group_order = ["EUR-linked", "ZAR-linked", "Flexible", "Inflation < 10%", "Inflation >= 10%"]
+g_yscale = alt.Scale(domain=group_order)
+g_color = alt.Scale(domain=["Exchange-rate regime", "Monetary history"],
+                    range=["#4c78a8", "#54a24b"])
+# Square-root axis: five countries sit at exactly zero and Libya at 274bp, so a
+# linear axis crushes the mass that carries the argument. Ticks are labelled in
+# basis points, so the compression is visible rather than implied.
+dr_scale = alt.Scale(type="sqrt", domain=[0, 300], clamp=True)
+dr_axis = alt.Axis(values=[0, 25, 50, 100, 200, 300], grid=False, titleFontSize=10,
+                   title="Δr by country  (bp, square-root axis)")
+g_yaxis = alt.Axis(title=None, labelLimit=105)
+
+pooled_rule = alt.Chart(pd.DataFrame({"x": [dr_pool * 1e4]})).mark_rule(
+    color="#333", strokeDash=[4, 4], strokeWidth=1.5).encode(
+    x=alt.X("x:Q", scale=dr_scale, axis=dr_axis))
+
+dots = alt.Chart(group_points).mark_circle(size=40, opacity=0.65).encode(
+    x=alt.X("dr_bp:Q", scale=dr_scale, axis=dr_axis),
+    y=alt.Y("group:N", scale=g_yscale, sort=group_order, axis=g_yaxis),
+    yOffset=alt.YOffset("jitter:Q", scale=alt.Scale(domain=[-1, 1])),
+    color=alt.Color("scheme:N", scale=g_color,
+                    legend=alt.Legend(title=None, orient="bottom")),
+    tooltip=["country", "group", alt.Tooltip("dr_bp:Q", title="delta r (bp)", format=".0f"),
+             alt.Tooltip("median_inflation:Q", title="median inflation", format=".1%")])
+
+pooled_tick = alt.Chart(groups).mark_tick(color="#111", thickness=3, size=24).encode(
+    x=alt.X("pooled_dr_bp:Q", scale=dr_scale, axis=dr_axis),
+    y=alt.Y("group:N", scale=g_yscale, sort=group_order, axis=g_yaxis),
+    tooltip=["group", alt.Tooltip("pooled_dr_bp:Q", title="pooled delta r (bp)", format=".0f"),
+             "n_countries", "n_windows", alt.Tooltip("prob_loss:Q", format=".0%")])
+
+price_panel = (pooled_rule + dots + pooled_tick).properties(width=320, height=200)
+
+corr_panel = alt.Chart(groups).mark_bar(size=15).encode(
+    x=alt.X("mean_corr:Q", scale=alt.Scale(domain=[0, 1]),
+            axis=alt.Axis(values=[0, 0.5, 1], grid=False, titleFontSize=10,
+                          title="mean corr. of Δ ln X")),
+    y=alt.Y("group:N", scale=g_yscale, sort=group_order,
+            axis=alt.Axis(title=None, labels=False, ticks=False)),
+    color=alt.Color("scheme:N", scale=g_color, legend=None),
+    # A two-country group has exactly one pair behind its bar: shown, but faded.
+    opacity=alt.condition(alt.datum.n_countries < 3, alt.value(0.3), alt.value(0.9)),
+    tooltip=["group", alt.Tooltip("mean_corr:Q", format="+.2f"), "n_countries"],
+).properties(width=105, height=200)
+
+alt.hconcat(price_panel, corr_panel, spacing=14).resolve_scale(y="shared").properties(
+    title=alt.TitleParams(
+        "Price and correlation, by grouping",
+        subtitle=["Grouping cannot lower the premium — expectation is linear in the pool —",
+                  "but it shows which groups are one exposure and which are many"],
+        anchor="start", fontSize=14))
+```
+
+Regime does not separate the typical country. The median EUR-linked country prices at 43bp and the median float at 42bp — the same number — and their interquartile ranges, 11–83bp and 7–90bp, overlap almost completely. What the peg changes is the tail and the correlation. No EUR-linked country prices above 91bp (Gabon), while the floats run out to 189bp (the Democratic Republic of Congo) and 274bp (Libya); and the mean pairwise correlation within the CFA bloc is $+0.84$, against $+0.15$ among the floats. A book of sixteen CFA exposures is close to one exposure held sixteen times, because they share an anchor: it prices like a diversified book and behaves like a concentrated one. That is a capital finding rather than a pricing one, and it cuts against the group whose price looks safest.
+
+ZAR-linked is two countries and twenty-eight windows once Lesotho is excluded for its CPI breaks, and its correlation of $+1.00$ is a single pair. It is drawn faded for that reason and should not be read as a regime result: it is the rand, observed twice.
+
+Monetary history separates what the regime does not. The twelve high-inflation countries price at a pooled 70bp against 55bp for the other thirty-eight, and — unlike the regime cut — the gap sits in the middle of the distribution rather than in the tail: a median of 65bp against 36bp. They are also the least correlated group in the figure, at $+0.07$ against $+0.37$ for the low-inflation countries, and that $+0.37$ is itself inflated by the CFA bloc sitting inside it. The expensive group is the diversifiable one, which is the most useful combination a facility can be handed: the countries that most need the cover are the ones a pooled book can most afford to hold together.
+
+Against the all-Africa pooled 58bp, then, a single price is a cross-subsidy running from the low-inflation countries to the high-inflation ones, while the CFA bloc pays roughly its own way and contributes most of the correlation. That is the tiering question of the previous section in a second guise, and it points the same way.
+
+::: {.content-hidden}
+
+## Outstanding robustness checks
+
+The numbers above are a single point estimate from one sample, one tenor and one definition of indexation. The following checks are outstanding; each is a small extension of the machinery already in this document.
+
+- **Sampling error on $\Psi$.** The 1,055 windows are heavily overlapping — a country with an unbroken series contributes 25 windows drawn from 40 annual observations — so a naive standard error is badly understated. *How:* country-block bootstrap: resample the 50 countries with replacement, recompute $\Psi$ and $\Delta r$ on each draw (10,000 draws), report the 5th–95th percentile band. A stationary block bootstrap over close years within country gives the complementary time-dimension band. @fig-bootstrap already does the country-block version on the 1995 pool; it needs extending to this sample and to $\Delta r$.
+- **The cyclicality period of the real exchange rate.** The affordability result rests on the real rate mean-reverting inside a 15-year tenor — the decomposition above shows the $Q$-priced cover is a near-fair bet, which is only true if it reverts. The length of that cycle is asserted rather than estimated. *How:* fit an AR(1) on $\ln Q$ country by country and as a pooled panel with country fixed effects (bias-correct the pooled estimate), report the implied half-lives and set them against $n$. Complement with a panel unit-root test (Im–Pesaran–Shin): $\ln Q$ following a random walk is the null under which no facility of this kind is priceable.
+- **Delayed inflation adjustment.** The project is assumed to reprice with $P_{i,t}$ contemporaneously. Real PPAs reset annually, off a lagged index, and often with a cap. *How:* replace $X_{i,t}$ by $P_{i,t-k}/S_{i,t}$ for $k \in \{0.25, 0.5, 1\}$ years, and by a capped variant in which the tariff rises by $\min(\pi_{i,t}, \bar{\pi})$, then re-price. The lag bites hardest exactly where the premium is largest — in the high-inflation tail — so this is the sensitivity most likely to move the headline. @sec-indexation makes the point qualitatively; this turns it into the same $\Delta r$ units.
+- **Sample period.** Partly done: @fig-country-spread reprices every country on starts of 1985, 1990 and 1995, and the pooled premium falls 58bp, 55bp, 30bp across them — the 1995 start of @sec-results excludes the 1994 CFA devaluation. *How, for the rest:* add a 2000 start and report $N$, $\Psi$, $P(V_w<0)$ and $\Delta r$ as a table, and attribute the drop to episodes rather than to years by dropping the 1994-95 close cohort from the 1985 sample instead of truncating it.
+- **Window length.** Done: @sec-tenor prices the cover at tenors from 5 to 25 years on this sample, holding the close cohort fixed so that the horizon is the only thing that varies. The premium does fall in $n$, but only about a third of the fall is mean reversion; the rest is the annuity conversion into $\Delta r$.
+- **Country groupings.** Done: @sec-groupings cuts this pool by exchange-rate regime and by monetary history, reporting each group on the price side and the correlation side. @sec-variation runs the regime cut on the 1995 pool and still needs reconciling with it. A commodity-exporter split remains the natural third cut.
+- **Correlation across countries and groups.** Diversification is the capital argument, and it depends on how much of the risk is common. *How:* the matrix of pairwise correlations of annual $\Delta \ln X$, ordered by regime, with mean within- and across-regime correlations (@fig-corr-heatmap, again on the other sample). The CFA bloc, moving against a common EUR anchor, is the obvious concentration; a single-factor decomposition — the share of variance taken by the first principal component — turns this into the number that sizes the capital.
+- **Understanding the intertemporal hedge.** The result rests on two mechanisms that the exhibits above conflate, and separating them is the strongest check available. *How:* (i) *within-window reversion* — split each window's $V_w$ into its drawing phase and its repayment phase, and report what fraction of gross drawings is recovered by maturity among windows that end positive; (ii) *premium banking across windows* — 74% of windows never pay out at all, so the Facility accumulates premium against the ones that do. Simulate its running balance over a rolling cohort of vintages (say five new projects a year for twenty years) to show how long it takes to fund the first tail loss out of premium income, and how sensitive that is to the correlation structure above. Together these say whether the price is doing genuine intertemporal work or is merely the mean of a heavy-tailed variable.
+
+# The dollar unit-revenue index: measuring the risk the project actually bears {#sec-index}
+
+Data: WDI CPI and official exchange rate series for African countries, 1985–2024, in `data/wdi_africa_long.csv` (Lesotho excluded for uncorrected CPI basket breaks in 1999, 2002 and 2009). We construct $X = P/S$ per country and plot it against the nominal rate $S$: the gap between the two lines is the inflation component that indexed revenues reprice automatically.
+
+```{python}
+#| label: fig-ken-nga
+#| fig-cap: 'Kenya (left) and Nigeria (right): nominal exchange rate (USD per unit of local currency, orange) against the dollar unit-revenue index X (blue). Nigeria''s nominal collapse vastly overstates the real one; Kenya''s X drifts up throughout.'
+#| fig-width: 9
+#| execution: {iopub.execute_input: '2026-09-17T07:26:31.727476Z', iopub.status.busy: '2026-09-17T07:26:31.726455Z', iopub.status.idle: '2026-09-17T07:26:32.920468Z', shell.execute_reply: '2026-09-17T07:26:32.919963Z'}
+# Side-by-side panels: width/height overridden per panel so the pair fits the
+# text block, spacing keeps Kenya's right axis clear of Nigeria's left one,
+# and the shared color scale collapses the two legends into one.
+alt.hconcat(
+    country_chart('KEN').properties(width=300, height=280, title='Kenya'),
+    country_chart('NGA').properties(width=300, height=280, title='Nigeria'),
+    spacing=70,
+).resolve_scale(color='shared')
+```
+
+```{python}
+#| label: tbl-nga-decomp
+#| tbl-cap: 'Nigeria 2014-2024: decomposition of the nominal move into inflation and the real residual.'
+#| execution: {iopub.execute_input: '2026-09-17T07:26:32.922037Z', iopub.status.busy: '2026-09-17T07:26:32.920468Z', iopub.status.idle: '2026-09-17T07:26:32.943553Z', shell.execute_reply: '2026-09-17T07:26:32.942534Z'}
+# Motivating fact: over 2014-2024 the naira's nominal move was ~9.4x while
+# prices moved ~4.8x - roughly half the headline depreciation was inflation
+# that an indexed tariff repriced automatically. X bottoms at ~51, not ~11.
+w = df[(df.iso3 == 'NGA') & (df.year.isin([2014, 2024]))].sort_values('year')
+s_ratio = w.exchange_rate.iloc[1] / w.exchange_rate.iloc[0]
+p_ratio = w.cpi.iloc[1] / w.cpi.iloc[0]
+x_ratio = w.X.iloc[1] / w.X.iloc[0]
+pd.DataFrame({
+    'metric': ['Exchange rate (N/USD)', 'Price level (CPI)', 'X = P/S (dollar unit-revenue index)'],
+    'ratio 2024/2014': [s_ratio, p_ratio, x_ratio],
+    'implied annual rate': [s_ratio**0.1 - 1, p_ratio**0.1 - 1, x_ratio**0.1 - 1],
+}).round(3)
+```
+
+# Why the standard fixes overcharge: hedging is an inflation bet {#sec-hedging}
+
+Refinancing into local currency and rolling NDF hedges are the same trade: covered interest parity pins the forward rate to the interest differential, $F = S_0(1+i_{LCU})/(1+i_{USD})$, by arbitrage. Both therefore charge the *full* differential
+
+$$ i_{LCU} - i_{USD} \;=\; \underbrace{\mathbb{E}\big[\pi - \pi^{\$}\big]}_{\text{inflation diff.}} \;+\; \underbrace{\mathbb{E}\big[-\dot q\big]}_{\text{real depr.}} \;+\; \underbrace{rp}_{\text{risk premium}} $$
+
+to shed an exposure of which the project — with indexed revenues — only ever bore the residual $-\dot x$.
+
+## The parity accounting
+
+Measured in units of the project's own (CPI-indexed) revenue, the extra cost of the local-currency loan over the USD loan collapses to $rp$ *if expectations are realised*: the inflation component is a wash in present value, paid as a certain coupon against an uncertain erosion of the nominal liability - which is the asymmetry @sec-nga-refi makes concrete. TODO: appendix derivation (see @sec-appendix).
+
+## The hedger's residual risk position: long local inflation
+
+The refinanced borrower's cash-flow health is $P_{i,t}/P_{i,0}$ against a liability fixed in local currency. Only realised inflation pays back the prepaid differential; realised *real* depreciation pays them nothing in cash — it merely vindicates the hedge counterfactually. The hedge therefore does not remove risk, it **rotates** it: a currency exposure becomes a forced long position in local inflation, whose losing branch is a stable, low-inflation currency (the Kenya path, @sec-kenya-refi).
+
+That position cannot be structured away by choosing a different repayment profile. A *level* local-currency annuity is a fixed nominal payment against revenue growing with CPI, so coverage is weakest at the start; a schedule *escalating* at the UIP-implied depreciation rate matches payments to expected revenue growth and restores coverage in every year. But the two are the same bet under different weightings. Escalation settles a larger share of the liability at exchange rates further in the future, so the dispersion of the borrower's realised USD cost *widens*: @sec-nga-refi computes both on the realised Nigerian and Kenyan paths and finds that escalation removes every DSCR breach while increasing the spread between the best and worst outcome by about a tenth. Repayment structuring relocates the exposure between coverage and cost; it does not reduce it.
+
+The Facility client of @sec-instrument, by contrast, holds no inflation position at all: DSCR is one by construction on every path, the premium is the same on every path, upside on real appreciation is kept and downside on real depreciation is insured.
+
+```{python}
+#| execution: {iopub.execute_input: '2026-09-17T07:26:32.947000Z', iopub.status.busy: '2026-09-17T07:26:32.947000Z', iopub.status.idle: '2026-09-17T07:26:32.950331Z', shell.execute_reply: '2026-09-17T07:26:32.950331Z'}
+# TODO (new analysis - anti-hedge exhibit #1): variance decomposition of
+# nominal depreciation into inflation differential + real residual.
+#
+# Spec:
+#   1. Add a US CPI series (FRED CPIAUCSL annual, or WDI 'USA' row) -> us_cpi[year].
+#   2. For each country and horizon h in {1, 5, 10, 15}:
+#        d_log_s  = log S ratio over h years
+#        d_log_pi = log (CPI/CPI_US) ratio over h
+#        d_log_q  = d_log_s - d_log_pi          (real residual)
+#      Share explained by inflation = d_log_pi / d_log_s (report medians,
+#      and var decomposition var(s) = var(pi) + var(q) + 2cov across windows).
+#   3. Figure: share of cumulative nominal depreciation explained by inflation,
+#      by horizon (pooled + per country dots).
+# Rebuts the "naira fell 483%" framing (TCX/AfDB 2026) with the fraction
+# an indexed tariff already hedges.
+pass
+```
+
+# The instrument: an emergency liquidity facility for the real residual {#sec-instrument}
+
+Let the **Facility** $G$ provide emergency liquidity. Whenever $R_{w,t}<0$, $G$ advances $100\,|R_{w,t}|$ so the project can meet its 100 of debt service; whenever $R_{w,t}>0$, the project escrows the surplus in an interest-bearing USD account to repay $G$ at maturity $\bar{t}$. Equivalently, $G$ tops the project's coverage back up to $\text{DSCR}=1$ in every period. Netting advances against escrowed surpluses, $G$'s present-value payout is
+
+$$
+L_w \;=\; D\,(-V_w)^{+}, \qquad \mathbb{E}[L_w] \;=\; -\,D\,\mathbb{E}[V_w]\ \text{ (mean basis)} ,
+$$
+
+so $G$ is made whole with interest when $V_w\ge 0$ and absorbs $D\,|V_w|$ when $V_w<0$. Here $V_w$ is the **net cover balance**: the discounted lifetime P&L already normalised by $A_{n,\rho}$, so it reads as a fraction of the debt stock. The actuarially fair premium covers $\mathbb{E}[L_w]$, abstracting from solvency capital (@sec-solvency) and profit loadings.
+
+**Cost relative to the debt stock, and the LLCR.** Since debt service is $n$ payments of 100, the amount borrowed is their present value,
+
+$$
+D \;=\; 100\,A_{n,\rho}, \qquad A_{n,\rho}=\sum_{k=1}^{n}(1+\rho)^{-k}=\frac{1-(1+\rho)^{-n}}{\rho} .
+$$
+
+The debt stock is the natural denominator, because the cover is in effect insurance on the loan-life coverage ratio. The present value of dollar CFADS over the loan life is $\sum_{t=\underline{t}+1}^{\bar{t}} 100\,(1+R_{w,t})(1+\rho)^{-(t-\underline{t})} = D\,(1 + V_w)$, so
+
+$$
+\text{LLCR}_w \;=\; \frac{\text{PV}_0\!\big(\text{CFADS}^{\$}\big)}{D} \;=\; 1 + V_w .
+$$
+
+The instrument draws exactly when $\text{LLCR}_w<1$ and tops it back to one. Its expected cost per dollar of debt is therefore the expected shortfall of the loan-life coverage ratio below unity:
+
+$$
+\frac{\mathbb{E}[L_w]}{D} \;=\; -\,\mathbb{E}[V_w] \;=\; \mathbb{E}\big[\,1-\text{LLCR}_w\,\big]
+$$
+
+(with the option-aware refinement $\mathbb{E}\big[(1-\text{LLCR}_w)^{+}\big]$ once the asymmetry of $L_w$ is priced).
+
+**The three premium quotes (and the $A$-identity).** Multiplying by $A_{n,\rho}$ converts an annuity into a present value; dividing converts a present value into an annuity. The actuarially fair *level annual premium* is therefore
+
+$$
+\Psi \;=\; \frac{\mathbb{E}[L_w]}{A_{n,\rho}} \;=\; -\,100\,\mathbb{E}[V_w],
+\qquad
+\frac{\Psi}{100} \;=\; -\,\mathbb{E}[V_w] .
+$$
+
+So $-\mathbb{E}[V_w]$ is simultaneously the premium as a fraction of each **annual debt service payment** and — because $D = 100\,A_{n,\rho}$ — the expected PV loss as a fraction of the **debt stock**. One number, two readings: this is the $A$-identity, and it is the pivot between the actuarial and the credit quote.
+
+Dividing by $A_{n,\rho}$ a second time gives
+
+$$
+\frac{\Psi}{D} \;=\; -\,\frac{\mathbb{E}[V_w]}{A_{n,\rho}} ,
+$$
+
+a flat annual payment expressed as a share of the *original principal*. **This is not the equivalent interest-rate spread, except on a bullet loan.** On an annuity-amortising loan a margin accrues on the declining outstanding balance — on average roughly 65% of the original principal — so the margin-equivalent add-on $\Delta r$ is about half again as large. It is computed exactly by `equivalent_rate()` in @sec-method, which treats the expected loss as additional principal and solves
+
+$$
+A_{n,\;\rho+\Delta r} \;=\; \frac{A_{n,\rho}}{1 + \big|\,\mathbb{E}[V_w]\,\big|} .
+$$
+
+We quote the premium to actuaries as a share of the covered exposure (debt service), and to investors as the margin-equivalent $\Delta r$.
+
+## Risk positions compared
+
+TODO (Fig 4.1, schematic - probably a static drawing rather than code): three-row
+payoff diagram - naked USD / hedged / USD + facility - against the two shocks
+(inflation, real depreciation), showing the facility as the only structure
+orthogonal to inflation: the hedger must root for inflation; the facility client
+keeps real-appreciation upside and has real-depreciation downside truncated.
+
+# Data and method {#sec-method}
+
+For every country and every rolling 15-year window since 1995, we compute the discounted sum of cumulative returns $R_{w,t} = X_{i,t}/X_{i,\underline{t}} - 1$ — the present value of the lifetime P&L, `V_raw` in the code — and normalise by the annuity factor $A_{n,\rho}$ into the net cover balance $V$, a PV per unit of debt stock, i.e. the expected LLCR shortfall of @sec-instrument. `compute_terminal_residuals_wdi`, defined in the hidden setup code at the top of the document, mirrors `source/data_analysis_functions.py::compute_terminal_residuals`, operating directly on the WDI data; `equivalent_rate` performs the amortising-loan margin conversion to $\Delta r$.
+
+```{python}
+#| execution: {iopub.execute_input: '2026-09-17T07:26:32.953342Z', iopub.status.busy: '2026-09-17T07:26:32.953342Z', iopub.status.idle: '2026-09-17T07:26:32.956834Z', shell.execute_reply: '2026-09-17T07:26:32.956834Z'}
+# TODO (new analysis): mean reversion of Q.
+#
+# Spec: estimate AR(1) on log Q by country (and pooled panel with country FE);
+# report implied half-lives. This underpins why the real residual is insurable
+# (long-run relative PPP) while the nominal rate is not, and supports
+# out-of-sample validity of the premium. One table: country, rho_hat, half-life.
+pass
+```
+
+# Results: the cover costs basis points {#sec-results}
+
+Pooled over all rolling 15-year windows (~668 windows, 50 countries, $\rho = 5\%$): expected loss $\approx$ 2.03% of debt stock in PV, with only ~16% of windows producing any loss. Quoted three ways: **~2.0% of each debt-service payment** (the actuarial quote), **~20bp of principal per year flat**, or **~30bp on the loan margin** of a 15-year annuity loan (20bp for a bullet).
+
+```{python}
+#| label: fig-hist-pooled
+#| fig-cap: Distribution of terminal residuals across all rolling 15-year windows; the red mass left of zero is the insurer's loss tail.
+#| execution: {iopub.execute_input: '2026-09-17T07:26:32.960166Z', iopub.status.busy: '2026-09-17T07:26:32.960166Z', iopub.status.idle: '2026-09-17T07:26:33.553472Z', shell.execute_reply: '2026-09-17T07:26:33.552379Z'}
+# Ported from wdi_hybrid_analysis.ipynb, cell 7.
+residuals = compute_terminal_residuals_wdi(df, years=window_length, discount_rate=discount_rate, window_mode="rolling", col="X", start_year=start_year)
+af = (1 - (1 + discount_rate) ** -window_length) / discount_rate
+expected_loss = residuals["loss"].mean()
+prob_loss = (residuals["V"] < 0).mean()
+n_windows = len(residuals)
+n_countries = residuals["iso3"].nunique()
+r_new = equivalent_rate(expected_loss=expected_loss, discount_rate=discount_rate, years=window_length)
+
+
+print(f"Windows from {start_year} to 2024")
+print(f"Number of windows  : {n_windows}")
+print(f"Number of countries: {n_countries}")
+print(f"Expected loss      : {expected_loss:.4f}")
+print(f"Probability of loss: {prob_loss:.4f}")
+print(f"interest rate increase: {r_new-discount_rate}")
+print(f"annual premium: {expected_loss/af} times debt stock")
+
+hist = alt.Chart(residuals).mark_bar().encode(
+    x=alt.X('V:Q', bin=alt.Bin(maxbins=40), title='V  (net cover balance, fraction of debt stock)'),
+    y=alt.Y('count():Q', title=f'Number of {window_length} year windows in pool'),
+    color=alt.condition(
+        alt.datum.V < 0,
+        alt.value('crimson'),
+        alt.value('steelblue'),
+    ),
+).properties(
+    width=600,
+    height=350,
+    title=f'Distribution of terminal residuals (n={n_windows}, expected loss={expected_loss:.3f}, P(loss)={prob_loss:.2%})'
+)
+hist
+```
+
+```{python}
+#| label: fig-premium-by-country
+#| fig-cap: Expected loss by country, as a fraction of the annuity (left axis) and of the debt stock (right axis).
+#| execution: {iopub.execute_input: '2026-09-17T07:26:33.555256Z', iopub.status.busy: '2026-09-17T07:26:33.555256Z', iopub.status.idle: '2026-09-17T07:26:34.900252Z', shell.execute_reply: '2026-09-17T07:26:34.900252Z'}
+# Ported from wdi_hybrid_analysis.ipynb, cell 8.
+by_country = (
+    residuals.groupby(["iso3", "country"], as_index=False)
+    .agg(
+        expected_loss=("loss", "mean"),
+        prob_loss=("V", lambda s: (s < 0).mean()),
+        n_windows=("loss", "size"),
+    )
+    .sort_values("expected_loss")  # most negative first = highest expected loss
+    .reset_index(drop=True)
+)
+# Equivalent rate increase: the additional interest rate (over the original
+# discount_rate) that would impose the same PV burden as the expected loss.
+by_country["rate_increase"] = by_country["expected_loss"].apply(
+    lambda el: equivalent_rate(el, discount_rate=discount_rate, years=window_length) - discount_rate
+)
+# expected_loss is net PV normalized by the annuity factor (af), i.e. a fraction
+# of the annuity. Dividing by af again expresses it as a fraction of debt stock.
+by_country["expected_loss_debt"] = by_country["expected_loss"] / af
+print(by_country.to_string(index=False))
+
+sort_order = by_country["country"].tolist()
+shared_tooltip = ["country", alt.Tooltip("expected_loss:Q", format=".4f"),
+                  alt.Tooltip("expected_loss_debt:Q", format=".4f"),
+                  alt.Tooltip("prob_loss:Q", format=".2%"),
+                  alt.Tooltip("rate_increase:Q", format=".4f"),
+                  "n_windows"]
+
+# Left axis: fraction of the annuity (the bars actually drawn).
+bar_annuity = alt.Chart(by_country).mark_bar(color="crimson").encode(
+    x=alt.X("country:N", sort=sort_order, title="Country", axis=alt.Axis(labelAngle=-60)),
+    y=alt.Y("expected_loss:Q", title="Expected loss (fraction of annuity)"),
+    tooltip=shared_tooltip,
+)
+
+# Right axis: same loss expressed as a fraction of the debt stock (= /af).
+# Drawn invisibly so it only contributes the secondary axis.
+bar_debt = alt.Chart(by_country).mark_bar(opacity=0).encode(
+    x=alt.X("country:N", sort=sort_order),
+    y=alt.Y("expected_loss_debt:Q",
+            title="Expected loss (fraction of debt stock)",
+            axis=alt.Axis(orient="right")),
+    tooltip=shared_tooltip,
+)
+
+bar = alt.layer(bar_annuity, bar_debt).resolve_scale(y="independent").properties(
+    width=800,
+    height=400,
+    title="Expected loss by country (sorted: highest expected loss → lowest)",
+)
+bar
+```
+
+```{python}
+#| label: fig-rate-by-country
+#| fig-cap: Equivalent margin uplift by country (annuity-amortising loan) - the investor-facing number.
+#| execution: {iopub.execute_input: '2026-09-17T07:26:34.902271Z', iopub.status.busy: '2026-09-17T07:26:34.902271Z', iopub.status.idle: '2026-09-17T07:26:35.942889Z', shell.execute_reply: '2026-09-17T07:26:35.942889Z'}
+# Ported from wdi_hybrid_analysis.ipynb, cell 9.
+rate_sorted = by_country.sort_values("rate_increase", ascending=False).reset_index(drop=True)
+
+rate_bar = alt.Chart(rate_sorted).mark_bar().encode(
+    x=alt.X("country:N", sort=rate_sorted["country"].tolist(), title="Country", axis=alt.Axis(labelAngle=-60)),
+    y=alt.Y("rate_increase:Q", title="Equivalent rate increase (over original interest rate)",
+            axis=alt.Axis(format="%")),
+    tooltip=["country", alt.Tooltip("rate_increase:Q", format=".4f"),
+             alt.Tooltip("expected_loss:Q", format=".4f"),
+             alt.Tooltip("prob_loss:Q", format=".2%"),
+             "n_windows"],
+    color=alt.value("darkorange"),
+).properties(
+    width=800,
+    height=400,
+    title="Equivalent rate increase by country (sorted: highest → lowest)",
+)
+rate_bar
+```
+
+```{python}
+#| execution: {iopub.execute_input: '2026-09-17T07:26:35.947500Z', iopub.status.busy: '2026-09-17T07:26:35.946478Z', iopub.status.idle: '2026-09-17T07:26:35.953239Z', shell.execute_reply: '2026-09-17T07:26:35.952638Z'}
+# TODO (new analysis - robustness): sample-start sensitivity, including the
+# 1994 CFA devaluation.
+#
+# Spec: rerun the pooled premium with start_year in {1985, 1990, 1995, 2000}
+# (data reaches back to 1985 for most countries). One table: start year,
+# n windows, expected loss, P(loss), margin-equivalent. The 1995 start sits
+# one year after the 50% CFA devaluation - this table preempts that critique.
+pass
+```
+
+# Two tariffs and a balance sheet between them {#sec-indexation}
+
+Everything above assumes the project's dollar revenue tracks $X=P/S$ exactly, which is to say that the tariff is indexed continuously and contemporaneously to the domestic price level. That assumption does the central work --- it is what makes the inflation component drop out and leaves only the real residual as risk --- so it needs a sensitivity rather than a footnote. But the assumption has to be relaxed in the right place, because there are two tariffs here and they are different kinds of object.
+
+The tariff a utility is **allowed to charge** its customers is a political variable. It is set by a regulator, revised on a cycle that slips, and frozen when the cost of living is salient. The tariff the utility has **contracted to pay** an IPP is not political. It is a contract, usually fully indexed, usually enforceable, and often standing behind a sovereign letter of support. The two do not have to move together, and when they do not, the difference lands on the offtaker's balance sheet. That balance sheet can carry the difference for a while. It cannot carry it indefinitely --- which is precisely what the financial condition of Africa's state utilities records.
+
+So the model has three layers, and `compute_indexed_residuals` now takes each separately:
+
+| Layer | What it is | Parameter |
+|---|---|---|
+| PPA tariff | what the IPP is contractually owed | `lag`, `reset_every`, `ref_window`, `threshold`, `share` |
+| Retail tariff | what the offtaker is allowed to collect | `retail_rule` (same five knobs) |
+| Offtaker balance sheet | absorbs the difference, up to a point | `buffer_capacity`, `buffer_passthrough` |
+
+**Layer 1 is in good shape.** South Africa's REIPPPP PPAs are standardised, non-negotiable, rand-denominated, 20-year and fully CPI-indexed, with the bid tariff quoted at a Base Date in the RFP and escalated each 1 April by the preceding calendar year's CPI. Kenya's PPAs oblige Kenya Power to settle within 30 days, with National Treasury letters of support behind the obligation.
+
+**Layer 2 is where the politics lives.** NERC owed seven biannual minor reviews from February 2016 and conducted none until 2019; the tariff that should have reached N51/kWh stayed at N31.8. Ghana suspended its adjustment formula and delayed cost-reflective increases through 2014--17. Kenya Power withdrew its 2026 tariff application citing inflation, with an election in view. Argentina held tariffs frozen from 2002 to 2015 across a currency collapse. Freezes cluster on devaluations, because that is when adjusting is most costly politically.
+
+**Layer 3 is real, thin, and mostly fiscal.** Nigeria's eleven DisCos ran a N1.83trn market shortfall between 2015 and 2019. The GenCos were kept whole not by the DisCos but by the sovereign: N701bn of NBET payment-assurance covering 80--90% of generation and gas invoices for 2017--18, a further N600bn covering 100% for 2019--20, and N3.3trn agreed as final settlement of 2015--2025 liabilities. Where no sovereign stepped in, the IPP tier absorbed it directly --- Kenya Power paid KSh4.73bn against KSh21bn demanded by three IPPs over five months of 2023; ZESCO owes its four IPPs just under \$800m, one of them enforcing \$350m in the London High Court; Ghana's grid-connected IPPs have threatened shutdown over accumulated PPA arrears.
+
+It is worth noticing what those payment-assurance facilities are. They are emergency liquidity, advanced to bridge exactly this gap, sized in the hundreds of billions of naira, and provided ad hoc and after the fact by a sovereign that had not priced the risk. The instrument this paper proposes is the ex-ante, priced version of something governments are already doing.
+
+```{python}
+#| label: tbl-indexation
+#| tbl-cap: 'Layer 1: cost of the cover when the PPA''s own indexation departs from the ideal, with the offtaker assumed to pay in full. All rows are computed on the same monthly grid; see the note below on the annual-grid headline number.'
+#| execution: {iopub.execute_input: '2026-09-17T07:26:35.957304Z', iopub.status.busy: '2026-09-17T07:26:35.957304Z', iopub.status.idle: '2026-09-17T07:26:40.336374Z', shell.execute_reply: '2026-09-17T07:26:40.336374Z'}
+import sys
+if '../source' not in sys.path:
+    sys.path.insert(0, '../source')
+import data_analysis_functions as daf
+
+r_month = (1 + discount_rate) ** (1 / 12) - 1
+af_15 = (1 - (1 + discount_rate) ** -window_length) / discount_rate
+
+
+def premium_row(label, **kw):
+    """Pooled premium under one rule, as a margin add-on in basis points."""
+    res = daf.compute_indexed_residuals(
+        df, years=window_length, discount_rate=discount_rate,
+        start_year=start_year, steps_per_year=12, **kw)
+    e_loss = -res['loss'].mean()
+    return {'Rule': label,
+            'E[loss] (% debt)': 100 * e_loss,
+            'Margin add-on (bp)': 1e4 * e_loss / af_15,
+            'P(loss) (%)': 100 * (res['loss'] < 0).mean(),
+            '5th pct V/A (%)': 100 * res['net_pv_by_debt_stock'].quantile(0.05),
+            'Windows': len(res)}
+
+
+ppa_rules = [
+    ('Full indexation (model assumption)',         dict()),
+    ('Monthly reset, 1m lag',                      dict(lag=1, reset_every=1)),
+    ('Quarterly reset, projected index',           dict(lag=0, reset_every=3)),
+    ('REIPPPP: annual reset, 9m lag, 12m avg ref', dict(lag=9, reset_every=12, ref_window=12)),
+    ('Biannual reset, 5% materiality trigger',     dict(lag=6, reset_every=6, threshold=np.log(1.05))),
+    ('Materiality trigger, 25%',                   dict(lag=3, reset_every=1, threshold=np.log(1.25))),
+    ('Partial indexation, 50% pass-through',       dict(lag=0, reset_every=1, share=0.5)),
+]
+
+ppa_sensitivity = pd.DataFrame([premium_row(name, **rule) for name, rule in ppa_rules])
+ppa_sensitivity['vs full (bp)'] = (ppa_sensitivity['Margin add-on (bp)']
+                                   - ppa_sensitivity['Margin add-on (bp)'].iloc[0])
+print(ppa_sensitivity.to_string(index=False, float_format='%.2f'))
+
+annual = daf.compute_indexed_residuals(
+    df, years=window_length, discount_rate=discount_rate, start_year=start_year, steps_per_year=1)
+annual_bp = 1e4 * -annual['loss'].mean() / af_15
+monthly_bp = ppa_sensitivity['Margin add-on (bp)'].iloc[0]
+print(f"\nAnnual grid, full indexation (the headline number): {annual_bp:.1f}bp over {len(annual)} windows.")
+print(f"Monthly grid, full indexation: {monthly_bp:.1f}bp. The {abs(monthly_bp - annual_bp):.1f}bp "
+      f"difference is the re-aggregation alone, not an indexation effect.")
+```
+
+Layer 1 is not where the risk is. Every rule that a PPA actually contains --- monthly reset, quarterly formula, REIPPPP's annual 1 April escalation off a nine-month-old twelve-month average, a biannual review with a 5% trigger --- moves the premium by between $-1.2$bp and $-0.1$bp against an 18.1bp baseline. This is the same conclusion the inflation-linked bond literature reaches about indexation lags: at tenors beyond a few years the lag choice has little consequence. A pure lag shifts *which* stretch of inflation the contract captures without changing *how much*, so in steady state it costs nothing and bites only when inflation accelerates.
+
+What does cost money is indexation that is incomplete rather than late. A 25% materiality trigger takes the premium to 30.1bp; halving the pass-through takes it to 92.8bp, more than five times the baseline. So the paper's claim should be stated precisely: cheap cover requires a PPA that indexes *fully*, not one that indexes *promptly*. That is a condition the standardised African PPAs mostly satisfy.
+
+One caveat on reading the table. Sub-annual rules require interpolating the annual series onto a monthly grid and averaging dollar revenue back up over the year, and that re-aggregation moves the full-indexation baseline from 19.6bp to 18.1bp on its own --- larger than every contractual-lag effect above. Read the differences within the table, not its levels, and do not quote 18.1bp as the paper's number.
+
+```{python}
+#| label: tbl-offtaker
+#| tbl-cap: 'Layers 2 and 3: the PPA stays fully indexed and enforceable, but the retail tariff is frozen and the offtaker''s balance sheet can only carry the difference for so long. Buffer capacity is expressed in years of PPA payments.'
+#| execution: {iopub.execute_input: '2026-09-17T07:26:40.339969Z', iopub.status.busy: '2026-09-17T07:26:40.339969Z', iopub.status.idle: '2026-09-17T07:26:49.324885Z', shell.execute_reply: '2026-09-17T07:26:49.323911Z'}
+freeze = dict(lag=6, reset_every=54)          # Nigeria 2016-19: no review for 4.5 years
+
+buffer_rows = [premium_row('PPA fully indexed, offtaker always pays')]
+buffer_rows.append(premium_row('Retail frozen 4.5y, unlimited balance sheet',
+                               retail_rule=freeze, buffer_capacity=np.inf,
+                               buffer_arrears_rate=r_month))
+for capacity in [2.0, 1.0, 0.5, 0.25]:
+    buffer_rows.append(premium_row(f'Retail frozen 4.5y, buffer {capacity:g} yr of payments',
+                                   retail_rule=freeze, buffer_capacity=capacity,
+                                   buffer_arrears_rate=r_month))
+buffer_rows.append(premium_row('  ... with 85% covered by a payment-assurance facility',
+                               retail_rule=freeze, buffer_capacity=0.5,
+                               buffer_passthrough=0.15, buffer_arrears_rate=r_month))
+buffer_rows.append(premium_row('Retail on a 25% trigger, buffer 0.5 yr',
+                               retail_rule=dict(lag=3, reset_every=1, threshold=np.log(1.25)),
+                               buffer_capacity=0.5, buffer_arrears_rate=r_month))
+buffer_rows.append(premium_row('Retail 50% pass-through, buffer 1 yr',
+                               retail_rule=dict(share=0.5), buffer_capacity=1.0,
+                               buffer_arrears_rate=r_month))
+
+offtaker_sensitivity = pd.DataFrame(buffer_rows)
+offtaker_sensitivity['vs full (bp)'] = (offtaker_sensitivity['Margin add-on (bp)']
+                                        - offtaker_sensitivity['Margin add-on (bp)'].iloc[0])
+print(offtaker_sensitivity.to_string(index=False, float_format='%.2f'))
+```
+
+This is where the risk actually is, and the numbers are not close.
+
+Give the offtaker an unlimited balance sheet and the retail tier is invisible: a 4.5-year freeze changes the premium by nothing at all, because the utility absorbs the whole wedge and the IPP is paid its indexed PPA tariff throughout. That row is today's model. It is the assumption that the offtaker always pays, stated explicitly for the first time.
+
+Make the balance sheet finite and the channel dominates everything in @tbl-indexation. The same 4.5-year freeze costs $+10.7$bp with two years of absorption capacity, $+16.6$bp with one year, $+21.6$bp with six months, and $+25.2$bp with three. At half a year of capacity the premium roughly doubles, from 18.1bp to 39.8bp, and the fifth-percentile window falls from $-11.6\%$ to $-26.1\%$ of debt stock. Set against this, the largest PPA-tier timing effect in @tbl-indexation was 1.2bp, and it went the other way. **The offtaker channel is one to two orders of magnitude larger than the indexation channel.** What the instrument is really covering is not lag in the PPA; it is the offtaker's inability to carry a political wedge.
+
+The sovereign backstop is decisive, and this is the row that matters for design. Routing 85% of the un-absorbed deficit to a payment-assurance facility --- the share NBET actually covered of Nigerian generation invoices in 2017--18 --- takes a six-month-buffer freeze from $+21.6$bp back to $+1.9$bp. Almost the entire cost of the offtaker channel is the *absence* of a backstop rather than the freeze itself. That is the same finding as the true-up result in a different guise, and it points the same way: the cheap intervention is not a better indexation clause, it is a committed liquidity line sitting behind the offtaker.
+
+Two honest limits. Buffer capacity is the parameter with the least direct evidence behind it: Nigeria's N1.83trn shortfall over five years and Kenya Power's settlement of a fifth of IPP invoices over five months in 2023 bracket the plausible range but do not pin it, and the premium is roughly linear in it over the range shown, so the number matters. And the analysis stops at a capacity of three months, because below that the squeeze reaches the IPP inside the first year and is absorbed into the DSCR $=1$ calibration at financial close, which mechanically shrinks the contract and makes the premium fall again --- an artifact of the normalisation, not a finding.
+
+```{python}
+#| label: tbl-tariff-evidence
+#| tbl-cap: 'Layer 2 in the data: does the retail tariff keep up? Doing Business price of electricity (US cents/kWh for a standardised consumer, DB16-20 methodology) merged to the WDI panel, 2014-19.'
+#| execution: {iopub.execute_input: '2026-09-17T07:26:49.328918Z', iopub.status.busy: '2026-09-17T07:26:49.328918Z', iopub.status.idle: '2026-09-17T07:26:51.067773Z', shell.execute_reply: '2026-09-17T07:26:51.067773Z'}
+import statsmodels.api as sm
+
+tariff = pd.read_csv('../data/db_electricity_price.csv')
+ev = (tariff.merge(df[['iso3', 'year', 'exchange_rate', 'cpi', 'X']], on=['iso3', 'year'])
+            .sort_values(['iso3', 'year']))
+grp = ev.groupby('iso3')
+for col, new in [('us_cents_per_kwh', 'd_usd'), ('X', 'd_X'),
+                 ('exchange_rate', 'd_s'), ('cpi', 'd_p')]:
+    ev[new] = grp[col].transform(lambda s: np.log(s).diff())
+ev = ev.dropna(subset=['d_usd', 'd_X']).copy()
+ev['d_lcu'] = ev['d_usd'] + ev['d_s']              # nominal retail tariff in LCU
+ev['wedge'] = ev['d_usd'] - ev['d_X']              # realised minus fully-indexed
+
+def _ols(y, xs, label, data=ev):
+    fit = sm.OLS(data[y], sm.add_constant(data[xs])).fit(
+        cov_type='cluster', cov_kwds={'groups': data['iso3']})
+    terms = '  '.join(f'{k}={fit.params[k]:+.2f} ({fit.bse[k]:.2f})' for k in ['const'] + xs)
+    print(f'  {label:38s} {terms}   n={int(fit.nobs)}  R2={fit.rsquared:.2f}')
+
+print(f'{ev["iso3"].nunique()} countries, {len(ev)} country-year changes, '
+      f'{int(ev["year"].min())}-{int(ev["year"].max())}\n')
+print('Does the nominal retail tariff track domestic prices?')
+_ols('d_lcu', ['d_p'], 'd ln(LCU tariff) on d ln CPI')
+
+print('\nAnd how does it behave in the states that stress the balance sheet?')
+_ols('d_usd', ['d_s'], 'd ln(USD tariff) on depreciation')
+_ols('wedge', ['d_s'], 'wedge on depreciation')
+_ols('wedge', ['d_s'], '  excl. |inflation| > 25%', ev[ev['d_p'].abs() < 0.25])
+for label, dummies in [('country fixed effects', 'iso3'), ('year fixed effects', 'year')]:
+    X = pd.concat([ev[['d_s']], pd.get_dummies(ev[dummies], prefix='fe', drop_first=True).astype(float)], axis=1)
+    fit = sm.OLS(ev['wedge'], X).fit(cov_type='cluster', cov_kwds={'groups': ev['iso3']})
+    print(f"  {'  with ' + label:38s} d_s={fit.params['d_s']:+.2f} ({fit.bse['d_s']:.2f})"
+          f"                    n={int(fit.nobs)}")
+
+big, calm = ev[ev['d_s'] > 0.10], ev[ev['d_s'] <= 0.10]
+print(f'\n  median wedge, years with >10% depreciation (n={len(big)}): {big["wedge"].median():+.3f}')
+print(f'  median wedge, all other years         (n={len(calm)}): {calm["wedge"].median():+.3f}')
+```
+
+Read in the two-tier frame, @tbl-tariff-evidence is about layer 2 --- what consumers actually pay, and therefore how much stress the balance sheet is under. It is not a test of whether the IPP's PPA is indexed, and the earlier draft of this section made that mistake.
+
+On average, the news for the buffer is better than the anecdotes suggest. Nominal retail tariffs track CPI close to one-for-one ($\beta = 0.98$, s.e. $0.21$), and in the states that matter they do better than full CPI indexation, not worse: the USD price of electricity is statistically indistinguishable from *invariant* to the exchange rate ($+0.12$, s.e. $0.10$), and the wedge against a fully-indexed tariff rises with depreciation at $+0.62$, strengthening to $+0.93$ once hyperinflation episodes are excluded and surviving country and year fixed effects. In years with more than 10% depreciation the median country's retail tariff does about 13 log points better than pure CPI indexation would deliver; in calm years it does about 6 points worse. That is what Ghana's AAF, MYTO's indices and Kenya's forex charge are built to do --- they index to the exchange rate, not only to the price level, precisely because the costs being recovered are dollar PPA obligations.
+
+So the typical year does not stress the buffer much. What erodes it is the roughly $-2\%$ per year of real drift, which shows up as quasi-fiscal deficit rather than as any single event, and what breaks it is the discrete political freeze. Freezes are country-episodes --- Nigeria 2016--19, Argentina 2002--15 --- not an average slope, and a panel of five annual differences per country cannot see them. They are exactly what @tbl-offtaker prices, and the case for the instrument rests on them rather than on the average.
+
+Three reasons not to lean hard on the regressions. The sample is five differences per country over 2014--19 on a standardised-consumer methodology. Doing Business converts to USD at its own reference rate while $X$ uses the WDI annual average, so a systematic conversion-date offset would generate a wedge correlated with depreciation --- though the near-zero loading of the USD price on the exchange rate is hard to reconcile with a pure timing artefact, which would show up near $-1$. And 2014--19 spans the oil price collapse, which pushes fuel-charge components down and plausibly explains the negative drift in calm years. Pinning layer 2 down properly needs a panel of local-currency tariff schedules with adjustment dates, and pinning layer 3 down needs utility payables; both are the natural next piece of data work.
+
+# Country variation, regimes, and diversification {#sec-variation}
+
+Expected loss ranges from exactly zero (Kenya: no window since 1995 ends PV-net below its start) to ~111bp of principal per year (Nigeria, where every losing window straddles the 1999 unification). Countries are classified into three exchange-rate regime groups (IMF AREAER, predominant arrangement 2000-2023): EUR-linked (CFA zone + Comoros, Cape Verde), ZAR-linked (CMA), and Flexible.
+
+```{python}
+#| label: tbl-country-stats
+#| tbl-cap: Country-level premium statistics by regime.
+#| execution: {iopub.execute_input: '2026-09-17T07:26:51.071931Z', iopub.status.busy: '2026-09-17T07:26:51.070419Z', iopub.status.idle: '2026-09-17T07:26:51.115969Z', shell.execute_reply: '2026-09-17T07:26:51.115460Z'}
+# Adapted from consolidated_currency_analysis.ipynb, cell 7
+# (regime mapped on iso3; note: overlaps with by_country above - merge later).
+residuals['regime'] = residuals['iso3'].map(fx_regime).fillna('Flexible')
+
+country_stats = residuals.groupby(['iso3', 'country']).agg(
+    n_windows=('loss', 'count'),
+    premium=('loss', 'mean'),
+    prob_loss=('loss', lambda x: (x < 0).mean()),
+    e_loss_given_loss=('loss', lambda x: x[x < 0].mean() if (x < 0).any() else 0.0),
+    worst=('loss', 'min'),
+    best=('V', 'max'),
+).reset_index()
+country_stats['regime'] = country_stats['iso3'].map(fx_regime).fillna('Flexible')
+country_stats = country_stats.sort_values('premium')
+
+pooled_premium = residuals['loss'].mean()
+
+display_df = country_stats[['country', 'regime', 'n_windows', 'premium', 'prob_loss', 'e_loss_given_loss', 'worst', 'best']].copy()
+display_df.columns = ['Country', 'Regime', 'Windows', 'Premium (%)', 'P(loss)', 'E[loss|loss] (%)', 'Worst (%)', 'Best (%)']
+for col in ['Premium (%)', 'E[loss|loss] (%)', 'Worst (%)', 'Best (%)']:
+    display_df[col] = display_df[col] * 100
+display_df['P(loss)'] = display_df['P(loss)'] * 100
+
+print(f"Pooled annual premium: {pooled_premium*100:.3f}% of debt stock")
+print(f"Countries: {len(country_stats)}, Total windows: {residuals.shape[0]}\n")
+print(display_df.to_string(index=False, float_format='%.3f'))
+```
+
+```{python}
+#| label: tbl-regime-summary
+#| tbl-cap: Regime-level summary.
+#| execution: {iopub.execute_input: '2026-09-17T07:26:51.121003Z', iopub.status.busy: '2026-09-17T07:26:51.119998Z', iopub.status.idle: '2026-09-17T07:26:51.139377Z', shell.execute_reply: '2026-09-17T07:26:51.138869Z'}
+# Ported from consolidated_currency_analysis.ipynb, cell 11.
+# Regime-level summary table
+regime_rows = []
+for regime in ['EUR-linked', 'ZAR-linked', 'Flexible', 'All']:
+    r = residuals if regime == 'All' else residuals[residuals['regime'] == regime]
+    countries_list = sorted(r['country'].unique())
+    regime_rows.append({
+        'Regime': regime,
+        'Countries': r['country'].nunique(),
+        'Windows': len(r),
+        'Premium (%)': r['loss'].mean() * 100,
+        'P(loss) (%)': (r['loss'] < 0).mean() * 100,
+        'E[loss|loss] (%)': r.loc[r['loss'] < 0, 'loss'].mean() * 100 if (r['loss'] < 0).any() else 0,
+        'Worst (%)': r['loss'].min() * 100,
+    })
+
+regime_summary = pd.DataFrame(regime_rows)
+print("Regime-level summary")
+print("=" * 80)
+print(regime_summary.to_string(index=False, float_format='%.3f'))
+
+# Also list countries per regime
+print("\nCountries by regime:")
+for regime in ['EUR-linked', 'ZAR-linked', 'Flexible']:
+    countries_in = sorted(residuals[residuals['regime'] == regime]['country'].unique())
+    print(f"  {regime} ({len(countries_in)}): {', '.join(countries_in)}")
+```
+
+```{python}
+#| label: fig-premium-by-regime
+#| fig-cap: Country premium distribution by regime (red dashed = pooled).
+#| execution: {iopub.execute_input: '2026-09-17T07:26:51.143403Z', iopub.status.busy: '2026-09-17T07:26:51.142402Z', iopub.status.idle: '2026-09-17T07:26:51.756063Z', shell.execute_reply: '2026-09-17T07:26:51.756063Z'}
+regime_order = ['EUR-linked', 'ZAR-linked', 'Flexible']
+regime_colors = ['#4c78a8', '#f58518', '#54a24b']
+# Ported from consolidated_currency_analysis.ipynb, cell 13.
+# Box + strip plot: country-level premiums by regime
+box_data = country_stats[['country', 'regime', 'premium']].copy()
+box_data['premium_pct'] = box_data['premium'] * 100
+
+boxes = alt.Chart(box_data).mark_boxplot(extent='min-max', size=40).encode(
+    x=alt.X('regime:N', sort=regime_order, title='Regime'),
+    y=alt.Y('premium_pct:Q', title='Annual premium (% of debt stock)'),
+    color=alt.Color('regime:N', scale=alt.Scale(domain=regime_order, range=regime_colors), legend=None)
+)
+
+points = alt.Chart(box_data).mark_circle(size=50, opacity=0.6).encode(
+    x=alt.X('regime:N', sort=regime_order),
+    y=alt.Y('premium_pct:Q'),
+    color=alt.Color('regime:N', scale=alt.Scale(domain=regime_order, range=regime_colors), legend=None),
+    tooltip=['country', alt.Tooltip('premium_pct:Q', format='.3f', title='Premium (%)')]
+)
+
+pooled_line = alt.Chart(pd.DataFrame({'y': [pooled_premium * 100]})).mark_rule(
+    color='red', strokeDash=[4, 4], strokeWidth=1.5
+).encode(y='y:Q')
+
+(boxes + points + pooled_line).properties(
+    width=300, height=300,
+    title='Country Premium Distribution by Regime (red dashed = pooled)'
+)
+```
+
+```{python}
+#| label: fig-corr-heatmap
+#| fig-cap: Pairwise correlation of annual X changes, ordered by regime (black lines = regime boundaries).
+#| execution: {iopub.execute_input: '2026-09-17T07:26:51.761683Z', iopub.status.busy: '2026-09-17T07:26:51.760684Z', iopub.status.idle: '2026-09-17T07:26:54.238532Z', shell.execute_reply: '2026-09-17T07:26:54.238532Z'}
+# Adapted from consolidated_currency_analysis.ipynb, cell 17 (WDI columns).
+# Correlation heatmap of annual X changes, ordered by regime
+wide = df.pivot(index='year', columns='iso3', values='X')
+# NB: .dropna() here would drop every row (country coverage differs), leaving an
+# all-NaN matrix; use pairwise-complete correlations instead.
+returns = wide.pct_change(fill_method=None)
+corr = returns.corr(min_periods=10)
+
+# Order countries by regime
+eur_countries = sorted([c for c in corr.columns if fx_regime.get(c) == 'EUR-linked'])
+zar_countries = sorted([c for c in corr.columns if fx_regime.get(c) == 'ZAR-linked'])
+flex_countries = sorted([c for c in corr.columns if c not in eur_countries + zar_countries])
+ordered = eur_countries + zar_countries + flex_countries
+
+# Melt to long format
+corr_ordered = corr.loc[ordered, ordered]
+corr_long = corr_ordered.reset_index().melt(id_vars='iso3', var_name='country2', value_name='correlation')
+corr_long = corr_long.rename(columns={'iso3': 'country1'})
+
+heatmap = alt.Chart(corr_long).mark_rect().encode(
+    x=alt.X('country2:N', sort=ordered, title=None),
+    y=alt.Y('country1:N', sort=ordered, title=None),
+    color=alt.Color('correlation:Q',
+                    scale=alt.Scale(scheme='redblue', domain=[-0.5, 1], domainMid=0),
+                    title='Corr'),
+    tooltip=['country1', 'country2', alt.Tooltip('correlation:Q', format='.2f')]
+).properties(width=500, height=500, title='Pairwise Correlation of Annual Real Exchange Rate Changes')
+
+# Regime boundary lines
+n_eur = len(eur_countries)
+n_zar = len(zar_countries)
+
+boundary_data = pd.DataFrame({'pos': [n_eur - 0.5, n_eur + n_zar - 0.5]})
+vrules = alt.Chart(boundary_data).mark_rule(color='black', strokeWidth=1.5).encode(x='pos:Q')
+hrules = alt.Chart(boundary_data).mark_rule(color='black', strokeWidth=1.5).encode(y='pos:Q')
+
+(heatmap + vrules + hrules).configure_axis(labelFontSize=6)
+```
+
+```{python}
+#| label: tbl-mean-corr
+#| tbl-cap: Mean pairwise correlations within and across regime groups.
+#| execution: {iopub.execute_input: '2026-09-17T07:26:54.243425Z', iopub.status.busy: '2026-09-17T07:26:54.242416Z', iopub.status.idle: '2026-09-17T07:26:54.265350Z', shell.execute_reply: '2026-09-17T07:26:54.265350Z'}
+# Ported from consolidated_currency_analysis.ipynb, cell 18.
+# Mean pairwise correlation statistics
+def mean_pairwise_corr(corr_matrix, group):
+    sub = corr_matrix.loc[group, group]
+    mask = np.triu(np.ones(sub.shape, dtype=bool), k=1)
+    vals = sub.where(mask).stack()
+    return vals.mean(), vals.std(), len(vals)
+
+def mean_cross_corr(corr_matrix, g1, g2):
+    vals = corr_matrix.loc[g1, g2].stack()
+    return vals.mean(), vals.std(), len(vals)
+
+print("Mean pairwise correlation of annual X changes")
+print("=" * 60)
+
+corr_rows = []
+m, s, n = mean_pairwise_corr(corr, eur_countries)
+corr_rows.append({'Group': 'Within EUR-linked', 'Mean corr': m, 'Std': s, 'Pairs': n})
+
+if len(zar_countries) > 1:
+    m, s, n = mean_pairwise_corr(corr, zar_countries)
+    corr_rows.append({'Group': 'Within ZAR-linked', 'Mean corr': m, 'Std': s, 'Pairs': n})
+
+m, s, n = mean_pairwise_corr(corr, flex_countries)
+corr_rows.append({'Group': 'Within Flexible', 'Mean corr': m, 'Std': s, 'Pairs': n})
+
+m, s, n = mean_cross_corr(corr, eur_countries, flex_countries)
+corr_rows.append({'Group': 'EUR-linked vs Flexible', 'Mean corr': m, 'Std': s, 'Pairs': n})
+
+if len(zar_countries) > 0:
+    m, s, n = mean_cross_corr(corr, zar_countries, flex_countries)
+    corr_rows.append({'Group': 'ZAR-linked vs Flexible', 'Mean corr': m, 'Std': s, 'Pairs': n})
+    m, s, n = mean_cross_corr(corr, eur_countries, zar_countries)
+    corr_rows.append({'Group': 'EUR-linked vs ZAR-linked', 'Mean corr': m, 'Std': s, 'Pairs': n})
+
+corr_table = pd.DataFrame(corr_rows)
+print(corr_table.to_string(index=False, float_format='%.3f'))
+```
+
+```{python}
+#| execution: {iopub.execute_input: '2026-09-17T07:26:54.269471Z', iopub.status.busy: '2026-09-17T07:26:54.269471Z', iopub.status.idle: '2026-09-17T07:26:54.277519Z', shell.execute_reply: '2026-09-17T07:26:54.276466Z'}
+# Diversification benefit: pooled vs average country-level.
+# Ported from consolidated_currency_analysis.ipynb, cell 19.
+# Diversification benefit: pooled vs average country-level
+avg_country_premium = country_stats['premium'].mean()
+avg_country_ploss = country_stats['prob_loss'].mean()
+
+pooled_ploss = (residuals['loss'] < 0).mean()
+
+print("Diversification benefit")
+print("=" * 60)
+print(f"{'Metric':<35} {'Pooled':>12} {'Avg country':>12}")
+print("-" * 60)
+print(f"{'Annual premium (% debt stock)':<35} {pooled_premium*100:>12.3f} {avg_country_premium*100:>12.3f}")
+print(f"{'P(loss)':<35} {pooled_ploss*100:>12.1f}% {avg_country_ploss*100:>12.1f}%")
+print()
+print("The pooled premium equals the average country premium (the expectation")
+print("is additive). The diversification benefit comes from variance reduction:")
+print("a facility covering many countries faces a tighter loss distribution,")
+print("reducing capital requirements.")
+```
+
+```{python}
+#| label: fig-bootstrap
+#| fig-cap: Bootstrap distributions of the pooled premium (country-block resampling, 10,000 draws).
+#| execution: {iopub.execute_input: '2026-09-17T07:26:54.283473Z', iopub.status.busy: '2026-09-17T07:26:54.282473Z', iopub.status.idle: '2026-09-17T07:26:56.792266Z', shell.execute_reply: '2026-09-17T07:26:56.791222Z'}
+# Ported from consolidated_currency_analysis.ipynb, cell 20.
+# Bootstrap confidence intervals (country-block resampling, 10,000 draws)
+def bootstrap_premium(res_df, n_boot=10000, seed=42):
+    rng = np.random.default_rng(seed)
+    countries = res_df['country'].unique()
+    n = len(countries)
+    country_losses = {c: res_df.loc[res_df['country'] == c, 'loss'].values for c in countries}
+    boot = np.empty(n_boot)
+    for b in range(n_boot):
+        sampled = rng.choice(countries, size=n, replace=True)
+        all_losses = np.concatenate([country_losses[c] for c in sampled])
+        boot[b] = all_losses.mean()
+    point = res_df['loss'].mean()
+    return {'point': point, 'se': boot.std(),
+            'ci_lo': np.percentile(boot, 2.5), 'ci_hi': np.percentile(boot, 97.5),
+            'distribution': boot}
+
+# Run bootstrap for overall and per-regime
+boot_results = {}
+boot_results['All'] = bootstrap_premium(residuals)
+for regime in ['EUR-linked', 'ZAR-linked', 'Flexible']:
+    boot_results[regime] = bootstrap_premium(residuals[residuals['regime'] == regime])
+
+# Print summary
+print("Bootstrap confidence intervals (10,000 country-block resamples)")
+print("=" * 70)
+for group, b in boot_results.items():
+    print(f"{group:>12}: premium = {b['point']*100:.3f}%  "
+          f"SE = {b['se']*100:.3f}%  "
+          f"95% CI = [{b['ci_lo']*100:.3f}%, {b['ci_hi']*100:.3f}%]")
+
+# Pre-bin bootstrap distributions in pandas to avoid Altair's 5000-row limit
+group_order = ['All', 'EUR-linked', 'ZAR-linked', 'Flexible']
+group_colors = ['steelblue', '#4c78a8', '#f58518', '#54a24b']
+
+binned_rows = []
+annot_rows = []
+for group, b in boot_results.items():
+    dist = b['distribution'] * 100
+    counts, edges = np.histogram(dist, bins=50)
+    centers = (edges[:-1] + edges[1:]) / 2
+    for c, cnt in zip(centers, counts):
+        if cnt > 0:
+            binned_rows.append({'group': group, 'bin_center': c, 'count': int(cnt)})
+    annot_rows.append({'group': group, 'x': b['point'] * 100, 'type': 'point'})
+    annot_rows.append({'group': group, 'x': b['ci_lo'] * 100, 'type': 'ci'})
+    annot_rows.append({'group': group, 'x': b['ci_hi'] * 100, 'type': 'ci'})
+
+binned_df = pd.DataFrame(binned_rows)
+annot_df = pd.DataFrame(annot_rows)
+
+# Merge annotations into binned data for faceted layering
+binned_df = binned_df.merge(
+    annot_df[annot_df['type'] == 'point'][['group', 'x']].rename(columns={'x': 'point_est'}),
+    on='group'
+)
+binned_df = binned_df.merge(
+    annot_df[annot_df['type'] == 'ci'].groupby('group')['x'].agg(['min', 'max']).rename(
+        columns={'min': 'ci_lo', 'max': 'ci_hi'}),
+    on='group'
+)
+
+base = alt.Chart(binned_df)
+
+hist_chart = base.mark_bar(opacity=0.8).encode(
+    x=alt.X('bin_center:Q', title='Annual premium (% of debt stock)'),
+    y=alt.Y('count:Q', title='Frequency'),
+    color=alt.Color('group:N', scale=alt.Scale(domain=group_order, range=group_colors), legend=None)
+)
+
+point_rules = base.mark_rule(color='red', strokeDash=[4, 4], strokeWidth=1.5).encode(
+    x='point_est:Q'
+)
+
+ci_lo_rules = base.mark_rule(color='gray', strokeDash=[2, 2], strokeWidth=1).encode(
+    x='ci_lo:Q'
+)
+
+ci_hi_rules = base.mark_rule(color='gray', strokeDash=[2, 2], strokeWidth=1).encode(
+    x='ci_hi:Q'
+)
+
+(hist_chart + point_rules + ci_lo_rules + ci_hi_rules).facet(
+    facet=alt.Facet('group:N', title='Group', sort=group_order),
+    columns=2
+).properties(title='Bootstrap Distributions of Annual FX Risk Premium')
+```
+
+# Worked examples: how the cover pans out for an investor {#sec-examples}
+
+At financial close, sponsors commonly plan to refinance their hard-currency exposure quickly. The examples below run the actual data through three structures - naked USD debt, USD debt + facility, and a local-currency refinance at close - for the paths investors fear (Nigeria 2014) and the paths where the hedge is pure cost (Kenya 2009). All ledgers are in USD, discounted at the USD rate (5%), against the baseline of the original USD loan (principal 772, flat debt service 100/yr over 10 years).
+
+## Nigeria 2014: the path the refinance-minded investor fears {#sec-nga-ledger}
+
+```{python}
+#| label: tbl-nga-ledger
+#| tbl-cap: 'Nigeria, financial close 2014, USD debt service 100/yr with facility: the facility bridges every shortfall through the 2015-16 devaluation and the 2023 float; drawdowns never exceed one year''s debt service.'
+#| execution: {iopub.execute_input: '2026-09-17T07:26:56.795235Z', iopub.status.busy: '2026-09-17T07:26:56.794273Z', iopub.status.idle: '2026-09-17T07:26:56.813006Z', shell.execute_reply: '2026-09-17T07:26:56.811994Z'}
+# New (developed in session 2026-08-31): facility ledger on the realised path.
+rho_l = 0.05
+win = df[(df.iso3 == 'NGA') & (df.year >= 2014) & (df.year <= 2024)].sort_values('year').reset_index(drop=True)
+S0, X0 = win.exchange_rate.iloc[0], win.X.iloc[0]
+rows, bal = [], 0.0
+for k in range(1, len(win)):
+    r = win.iloc[k]
+    g = r.X / X0 - 1
+    flow = 100 * g                       # + = surplus to escrow, - = facility drawdown
+    bal = bal * (1 + rho_l) + flow       # facility balance accrues at 5%
+    rows.append({'year': int(r.year), 'fx': r.exchange_rate, 'X_idx': 100 * r.X / X0,
+                 'revenue_usd': 100 + flow, 'facility_flow': flow, 'facility_balance': bal})
+ledger = pd.DataFrame(rows)
+ledger.round(1)
+```
+
+```{python}
+#| label: fig-nga-ledger
+#| fig-cap: Facility flows (bars) and running facility balance (line), Nigeria 2014 close.
+#| execution: {iopub.execute_input: '2026-09-17T07:26:56.817604Z', iopub.status.busy: '2026-09-17T07:26:56.816600Z', iopub.status.idle: '2026-09-17T07:26:57.219060Z', shell.execute_reply: '2026-09-17T07:26:57.218044Z'}
+bars = alt.Chart(ledger).mark_bar().encode(
+    x=alt.X('year:O', title=None),
+    y=alt.Y('facility_flow:Q', title='Facility flow (USD, per 100 debt service)'),
+    color=alt.condition(alt.datum.facility_flow < 0, alt.value('crimson'), alt.value('steelblue')),
+)
+line = alt.Chart(ledger).mark_line(color='#333', point=True).encode(
+    x='year:O',
+    y=alt.Y('facility_balance:Q', title='Facility balance', axis=alt.Axis(orient='right')),
+)
+alt.layer(bars, line).resolve_scale(y='independent').properties(width=550, height=280)
+```
+
+## Nigeria 2014, refinanced: the bet, not the bill {#sec-nga-refi}
+
+The honest counterfactual first. Converting every naira payment back to USD at realised rates, the naira loan is ex-post *cheaper* than the USD loan in present value (~524 against 772): depreciation outran the differential the coupon priced. So the case against the refinance is **not** that it costs more in expectation — a competent counterparty can falsify that on Nigeria's own decade. The case is that it swaps a contingent, insurable exposure for an uninsured directional position on inflation.
+
+Two facts make that concrete.
+
+**The level naira annuity breaches DSCR immediately** (0.77 in 2015, 0.89 in 2016) — and the breach is not a devaluation effect. Once the loan is in naira, the exchange rate is irrelevant to coverage: revenue and debt service are both in naira. Nigerian CPI inflation in 2015 was 9.0%, and $1.090 \times 100 / 142.3 = 0.77$. The project defaults in year one on a path where the hedge turned out to be *ex-post correct*.
+
+**That breach is fixable by escalating the schedule** at the UIP-implied 8% — and fixing it makes the inflation position larger, not smaller. Both schedules price the same loan at the same coupon and have identical present value at close; they differ only in when the liability is settled, and therefore in how much of it is converted at exchange rates that have not happened yet.
+
+```{python}
+#| label: tbl-nga-refi
+#| tbl-cap: 'The 2014 naira refinance (13% coupon): USD-converted payments and DSCR against indexed revenues.'
+#| execution: {iopub.execute_input: '2026-09-17T07:26:57.221555Z', iopub.status.busy: '2026-09-17T07:26:57.221555Z', iopub.status.idle: '2026-09-17T07:26:57.235505Z', shell.execute_reply: '2026-09-17T07:26:57.234916Z'}
+# New (session 2026-08-31): naira refinance at close, 10y annuity at 13%.
+r_ngn, T_ref = 0.13, 10
+af_usd10 = (1 - 1.05 ** -T_ref) / 0.05
+af_ngn10 = (1 - (1 + r_ngn) ** -T_ref) / r_ngn
+D_usd = 100 * af_usd10                       # 772.2
+pay_ngn = D_usd * S0 / af_ngn10              # fixed naira annuity
+CPI0 = win.cpi.iloc[0]
+refi = pd.DataFrame({
+    'year': win.year.iloc[1:].astype(int).values,
+    'pay_usd': (pay_ngn / win.exchange_rate.iloc[1:]).values,
+    'rev_ngn': (100 * S0 * win.cpi.iloc[1:] / CPI0).values,
+})
+refi['dscr_ngn'] = refi.rev_ngn / pay_ngn
+pv_refi = float(np.sum(refi.pay_usd.values * 1.05 ** -np.arange(1, T_ref + 1)))
+print(f"Naira annuity: N{pay_ngn:,.0f}/yr = {pay_ngn / S0:.1f} USD at close FX (vs 100 for the USD loan)")
+print(f"PV of USD-converted naira payments @5%: {pv_refi:.1f}  vs USD loan {D_usd:.1f}")
+refi.round(2)
+```
+
+```{python}
+#| label: tbl-schedule-bet
+#| tbl-cap: Level vs escalating local-currency schedules on the realised Nigerian and Kenyan paths. Escalation removes the DSCR breaches and simultaneously widens the dispersion of realised USD cost.
+#| execution: {iopub.execute_input: '2026-09-17T07:26:57.240062Z', iopub.status.busy: '2026-09-17T07:26:57.238989Z', iopub.status.idle: '2026-09-17T07:26:57.260952Z', shell.execute_reply: '2026-09-17T07:26:57.260952Z'}
+# Repayment structuring relocates the exposure between coverage and cost.
+# The escalator is set at the UIP-implied expected depreciation (coupon - USD rate),
+# so both schedules price the same loan and have identical PV at the coupon.
+sched_rows = []
+for iso_s, y0_s, coupon_s, lab_s in [('NGA', 2014, 0.13, 'Nigeria 2014'), ('KEN', 2009, 0.12, 'Kenya 2009')]:
+    esc_s = coupon_s - 0.05
+    ws = df[(df.iso3 == iso_s) & (df.year >= y0_s) & (df.year <= y0_s + 10)].sort_values('year').reset_index(drop=True)
+    S0_s, CPI0_s = ws.exchange_rate.iloc[0], ws.cpi.iloc[0]
+    tt = np.arange(1, 11)
+    level_s = np.full(10, D_usd * S0_s / ((1 - (1 + coupon_s) ** -10) / coupon_s))
+    escal_s = (D_usd * S0_s / np.sum((1 + esc_s) ** (tt - 1) / (1 + coupon_s) ** tt)) * (1 + esc_s) ** (tt - 1)
+    rev_s = 100 * S0_s * (ws.cpi.iloc[1:].values / CPI0_s)     # indexed local-currency revenue
+    fx_s = ws.exchange_rate.iloc[1:].values
+    for name_s, pay_s in [('level', level_s), ('escalating', escal_s)]:
+        dscr_s = rev_s / pay_s
+        sched_rows.append({'case': lab_s, 'schedule': name_s,
+                           'min DSCR': dscr_s.min(), 'yrs < 1.0': int((dscr_s < 1).sum()),
+                           'USD PV': float(np.sum(pay_s / fx_s * 1.05 ** -tt))})
+sched = pd.DataFrame(sched_rows)
+spread = (sched.query("case=='Kenya 2009'").set_index('schedule')['USD PV']
+          - sched.query("case=='Nigeria 2014'").set_index('schedule')['USD PV'])
+print(f"USD loan PV {D_usd:.1f}; the facility holds the same debt at DSCR = 1 on every path.")
+print(f"Best-to-worst spread in realised USD cost: level {spread['level']:.1f}, "
+      f"escalating {spread['escalating']:.1f}  ({spread['escalating'] / spread['level'] - 1:+.1%})")
+sched.round({'min DSCR': 2, 'USD PV': 1})
+```
+
+## Kenya 2009: the certain coupon with no offset {#sec-kenya-refi}
+
+The shilling refinance pays a ~7-point differential against realised depreciation of ~2.7%/yr: every single USD-converted payment exceeds the USD loan's 100, an ex-post overpayment of ~200bp of principal per year for a decade — while $X$ never PV-net fell below any window start since 1995, so the Facility client paid ~20bp and never drew.
+
+```{python}
+#| label: tbl-ken-refi
+#| tbl-cap: 'Kenya, close 2009: KES refinance at 12% - USD-converted payments never fall below the USD loan''s 100.'
+#| execution: {iopub.execute_input: '2026-09-17T07:26:57.265001Z', iopub.status.busy: '2026-09-17T07:26:57.264002Z', iopub.status.idle: '2026-09-17T07:26:57.278795Z', shell.execute_reply: '2026-09-17T07:26:57.277211Z'}
+# New (session 2026-08-31).
+r_kes = 0.12
+wk = df[(df.iso3 == 'KEN') & (df.year >= 2009) & (df.year <= 2019)].sort_values('year').reset_index(drop=True)
+S0k = wk.exchange_rate.iloc[0]
+af_kes10 = (1 - (1 + r_kes) ** -10) / r_kes
+pay_kes = D_usd * S0k / af_kes10
+ken = pd.DataFrame({
+    'year': wk.year.iloc[1:].astype(int).values,
+    'pay_usd': (pay_kes / wk.exchange_rate.iloc[1:]).values,
+})
+pv_kes = float(np.sum(ken.pay_usd.values * 1.05 ** -np.arange(1, 11)))
+extra_bp = (pv_kes - D_usd) / af_usd10 / D_usd * 1e4
+print(f"PV of USD-converted KES payments @5%: {pv_kes:.1f} vs USD loan {D_usd:.1f}")
+print(f"Ex-post overpayment: {pv_kes - D_usd:.1f} = flat {extra_bp:.0f}bp of principal/yr for 10 years")
+ken.round(1)
+```
+
+## Scenario matrix
+
+| | Certain annual cost | Nigeria 2014 path | Kenya 2009 path | Failure mode |
+|---|---|---|---|---|
+| USD debt, naked | 0 | technical default 2015-17 and 2023-24 | fine | real depreciation |
+| **USD debt + facility** | **20bp pooled / ~111bp standalone (Nigeria)** | every shortfall bridged, no default | premium paid, never drawn | none on any sample path |
+| Refinance to LCU, level | full differential (contractual) | ex-post cheap in PV, **but DSCR breach yrs 1-2** | ex-post ~200bp/yr overpaid | long inflation; coverage fails if inflation undershoots |
+| Refinance to LCU, escalating | full differential (contractual) | no DSCR breach; ex-post cheapest of the four | **worst of the four ex post** | long inflation, amplified; negative amortisation, market depth |
+| Rolling NDF hedge | differential, repriced each roll | forward points explode after each deval | overpays like the refinance | rollover at the worst moment |
+
+TODO: generate this table from the computations above rather than hard-coding.
+
+```{python}
+#| execution: {iopub.execute_input: '2026-09-17T07:26:57.282003Z', iopub.status.busy: '2026-09-17T07:26:57.282003Z', iopub.status.idle: '2026-09-17T07:26:57.286087Z', shell.execute_reply: '2026-09-17T07:26:57.286087Z'}
+# TODO (new analysis - anti-hedge exhibit #2): distributions of minimum DSCR,
+# not mean cost, across ALL historical windows for the three structures.
+#
+# Spec: for every rolling window and each structure
+#   (a) naked USD:      DSCR_t = H_t/H_0
+#   (b) USD + facility: DSCR_t = 1 by construction (cost = premium)
+#   (c) LCU refinance:  DSCR_t = (CPI_t/CPI_0) / payment_t, for BOTH a level
+#                       annuity and a schedule escalating at the UIP-implied rate
+#                       (coupon = i_usd + trailing-5y inflation differential +
+#                       spread; sensitivity over the spread assumption)
+# compute min DSCR over the window and the number of years with DSCR < 1.
+# One chart: three overlaid distributions of min-DSCR. The point: project
+# finance prices the worst year - the hedge does not remove the left tail,
+# it relabels it: real-depreciation risk becomes inflation-undershoot risk.
+# Pair with tbl-schedule-bet, which shows the same rotation in cost dispersion.
+pass
+```
+
+# Solvency: what capital the insurer actually needs {#sec-solvency}
+
+Two distinct commitments. The *liquidity* commitment is bounded by one year of covered debt service: since $X > 0$, the Facility can never advance more than one year's debt service in any year (worst observed single-year shortfall: ~75%, Nigeria 2024) — cheap for a AAA balance sheet such as the AfDB's to stand behind. The *solvency* capital must instead be sized off the terminal-loss tail of the (diversified) covered book, i.e. the upper tail of $L_w = D\,(-V_w)^{+}$ (equivalently the left tail of $V_w$).
+
+```{python}
+#| label: tbl-tail
+#| tbl-cap: Terminal-loss tail across all windows, and the worst single-year drawdown.
+#| execution: {iopub.execute_input: '2026-09-17T07:26:57.289727Z', iopub.status.busy: '2026-09-17T07:26:57.289727Z', iopub.status.idle: '2026-09-17T07:26:57.698514Z', shell.execute_reply: '2026-09-17T07:26:57.697498Z'}
+# New (session 2026-08-31): per-window tail quantiles and worst annual shortfall.
+rows = []
+for _, w in residuals.iterrows():
+    seg = df[(df.iso3 == w.iso3) & (df.year >= w.window_start) & (df.year <= w.window_end)]
+    rows.append(seg.X.min() / seg.X.iloc[0] - 1)
+tail = pd.Series(residuals['V'])
+print('terminal net PV / debt stock: q01 {:+.3f}  q05 {:+.3f}  q10 {:+.3f}  worst {:+.3f}'.format(
+    tail.quantile(0.01), tail.quantile(0.05), tail.quantile(0.10), tail.min()))
+print('worst single-year shortfall vs window start: {:+.3f}'.format(min(rows)))
+```
+
+```{python}
+#| execution: {iopub.execute_input: '2026-09-17T07:26:57.701569Z', iopub.status.busy: '2026-09-17T07:26:57.701569Z', iopub.status.idle: '2026-09-17T07:26:57.705572Z', shell.execute_reply: '2026-09-17T07:26:57.704542Z'}
+# TODO (new analysis - the EU grant number): portfolio VaR via the country-
+# block bootstrap of @sec-variation.
+#
+# Spec: stylised covered book (e.g. EUR 1bn of covered annual debt service,
+# staggered vintages across countries); reuse bootstrap_premium's resampling to
+# build the portfolio terminal-loss distribution; report VaR_99 and VaR_99.5
+# minus expected loss = risk buffer in EUR. That buffer is the grant-shaped
+# quantity (candidate window: EFSD+ "Pricing Component Plus", open to Jan 2028).
+# Also: time-profile of aggregate drawdowns across vintages (2015-16, 2020,
+# 2023 cluster) -> when the buffer peaks, not just how big it is.
+pass
+```
+
+# Policy design and conclusion {#sec-policy}
+
+About 30bp pooled - but adverse selection (the Nigerias buy, the Kenyas don't) unravels pooled pricing toward Nigeria's ~165bp standalone, arguing for embedding the cover in DFI lending terms or tiering premia by country (@fig-rate-by-country).
+
+**Positioning in the current landscape.** The instrument is the complement, not the competitor, of the local-currency agenda: TCX and the Persaud partial FX guarantee operate on the *nominal* rate for lenders who convert; EcoInvest Brasil's FX liquidity line and this facility operate on *liquidity against the real component* for debt that stays in hard currency. The emerging hybrid PPA frameworks (Kenya, Nov 2025 / Jan 2026 regulations) explicitly retain a hard-currency component for international debt service - exactly the slice this facility makes safe. TODO: expand; cite TCX/AfDB (2026), IOB WP 2025.12, World Bank PRWP 10568, EFSD+.
+
+**Caveats.** The post-1995 sample begins one year after the 1994 CFA devaluation (addressed by the start-year robustness of @sec-results); overlapping windows are handled by the country-block bootstrap.
+
+```{python}
+#| label: tbl-adverse-selection
+#| tbl-cap: Pooled premium excluding the k worst countries - the price of adverse selection.
+#| execution: {iopub.execute_input: '2026-09-17T07:26:57.708749Z', iopub.status.busy: '2026-09-17T07:26:57.707838Z', iopub.status.idle: '2026-09-17T07:26:57.722194Z', shell.execute_reply: '2026-09-17T07:26:57.721182Z'}
+# New: pooled premium as the worst countries opt out (or are tiered out).
+worst_order = country_stats.sort_values('premium')['iso3'].tolist()  # most negative first
+rows = []
+for k in range(0, 6):
+    keep = residuals[~residuals['iso3'].isin(worst_order[:k])]
+    rows.append({'excluded (worst k)': k,
+                 'countries': keep['iso3'].nunique(),
+                 'premium (% debt stock)': -keep['loss'].mean() * 100,
+                 'P(loss) (%)': (keep['loss'] < 0).mean() * 100})
+pd.DataFrame(rows).round(3)
+```
+
+# Appendix {#sec-appendix .appendix}
+
+- TODO: derivation of the $A$-identity and the bullet-vs-annuity spread correction, $A_{n,\rho+\Delta r} = A_{n,\rho}/(1+|\mathbb{E}[V_w]|)$.
+- TODO: revenue-numeraire derivation — extra cost of local refinance $= rp$ when expectations are realised.
+- Event-based robustness lives in `events_From_baseline.ipynb`.
+
+```{python}
+#| eval: false
+#| label: fig-all-countries
+#| fig-cap: 'All-country panels: nominal rate vs X (set eval: true to render; slow).'
+#| execution: {iopub.execute_input: '2026-09-17T07:26:57.725707Z', iopub.status.busy: '2026-09-17T07:26:57.725707Z', iopub.status.idle: '2026-09-17T07:27:35.459740Z', shell.execute_reply: '2026-09-17T07:27:35.457210Z'}
+# Ported from wdi_hybrid_analysis.ipynb, cell 11.
+import math
+
+countries = df[['iso3', 'country']].drop_duplicates().sort_values('country').reset_index(drop=True)
+
+charts = []
+for i, row in countries.iterrows():
+    iso3, country_name = row['iso3'], row['country']
+    cdata = df[(df['iso3'] == iso3) & (df['year'] >= start_year)].dropna(subset=['usd_per_lcu', 'X'])
+    if cdata.empty:
+        continue
+
+    legend_setting = alt.Legend(title="Series", orient="bottom") if i % 2 == 0 else None
+
+    left_chart = alt.Chart(cdata).mark_line(point=True).encode(
+        x=alt.X('year:O', title='Year'),
+        y=alt.Y('usd_per_lcu:Q', title='USD per LCU'),
+        color=alt.Color('Metric:N', legend=legend_setting),
+        tooltip=['year', 'usd_per_lcu']
+    ).transform_calculate(Metric="'usd_per_lcu'")
+
+    right_chart = alt.Chart(cdata).mark_line(point=True, color='orange').encode(
+        x=alt.X('year:O', title='Year'),
+        y=alt.Y('X:Q', title='X = P / S  (USD per local basket)', axis=alt.Axis(orient='right')),
+        color=alt.Color('Metric:N', legend=legend_setting),
+        tooltip=['year', 'X']
+    ).transform_calculate(Metric="'X'")
+
+    base = alt.layer(left_chart, right_chart).resolve_scale(y='independent').properties(
+        title=country_name,
+        width=400,
+        height=300
+    )
+    charts.append(base)
+
+def chart_list_to_rows_of_two(chart_list):
+    rows = math.ceil(len(chart_list) / 2)
+    chart_rows = []
+    for i in range(rows):
+        charts_in_row = chart_list[i*2 : i*2 + 2]
+        if len(charts_in_row) == 2:
+            r = alt.hconcat(*charts_in_row).resolve_scale(color='independent')
+        else:
+            r = charts_in_row[0]
+        chart_rows.append(r)
+    return alt.vconcat(*chart_rows)
+
+final_layout = chart_list_to_rows_of_two(charts)
+final_layout
+```
+
+## The wrong decomposition and the right one
+
+The market treats this exposure as *nominal* FX risk. But nominal depreciation decomposes as
+
+$$
+\dot s_{i,t} \;=\; \underbrace{\big(\pi_{i,t} - \pi^{\$}_{t}\big)}_{\text{inflation differential}} \;+\; \underbrace{\big(-\dot q_{i,t}\big)}_{\text{real depreciation}} ,
+$$
+
+and an inflation-indexed tariff passes the inflation component straight through to revenues. Because $X=P/S$, taking logs and differencing gives the annual identity $\dot x_{i,t} = \pi_{i,t} - \dot s_{i,t}$ — inflation net of nominal depreciation, which is real appreciation $\dot q_{i,t}$ plus US inflation $\pi^{\$}_{t}$. Cumulating the annual observations from close,
+
+$$
+\ln\!\big(1+R_{w,t}\big) \;=\; x_{i,t}-x_{i,\underline{t}} \;=\; \sum_{u=\underline{t}+1}^{t}\big(\pi_{i,u}-\dot s_{i,u}\big) .
+$$
+
+The per-period P&L is thus the cumulative growth of $X$ since financial close. The project gains exactly when domestic inflation has cumulatively outpaced nominal depreciation, and falls into shortfall when the currency has depreciated *in real terms*. The inflation level itself drops out — it is passed through by the indexed tariff — leaving only the real component as risk. @sec-hedging shows what it costs to ignore this; the instrument of @sec-instrument prices only the residual.
+
+TODO: tighten prose; add one-sentence roadmap of the paper.
+
+:::
+

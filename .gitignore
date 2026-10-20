@@ -62,3 +62,7 @@ MANIFEST
 
 /.quarto/
 **/*.quarto_ipynb
+
+# Local tooling / build caches
+.claude/worktrees/
+notebooks/.quarto/
